@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import os
 import sys
 from pathlib import Path
-
-import requests
 
 from src.cgv_imax_watcher.cgv_api import create_http_session, fetch_schedule, is_imax
 from src.cgv_imax_watcher.config import Config, build_date_range, parse_theaters
 from src.cgv_imax_watcher.email_service import send_email
-from src.cgv_imax_watcher.models import Theater
 from src.cgv_imax_watcher.state import load_state, save_state
 
 BASE_DIR = Path(__file__).resolve().parent

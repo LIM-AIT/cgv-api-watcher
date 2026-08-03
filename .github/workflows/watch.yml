@@ -1,0 +1,60 @@
+name: CGV Watcher
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cgv-watcher
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore watcher state
+        uses: actions/cache@v4
+        with:
+          path: state.json
+          key: cgv-watcher-state-${{ github.run_id }}
+          restore-keys: |
+            cgv-watcher-state-
+
+      - name: Run watcher once
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          THEATERS: ${{ secrets.THEATERS }}
+          DATE_FROM: ${{ secrets.DATE_FROM }}
+          DATE_TO: ${{ secrets.DATE_TO }}
+          MOVIE_KEYWORD: ${{ secrets.MOVIE_KEYWORD }}
+          INTERVAL_SECONDS: "300"
+          REQUEST_TIMEOUT_SECONDS: "20"
+          USE_COLOR: "false"
+        run: python run.py --once
+
+      - name: Save watcher state
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: cgv-watcher-state-${{ github.run_id }}
