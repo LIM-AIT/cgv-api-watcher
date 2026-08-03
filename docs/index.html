@@ -1,0 +1,508 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="CGV 특별관 예매 오픈 감시 상태 대시보드"
+  >
+  <title>CGV API Watcher</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #0d1117;
+      --surface: #161b22;
+      --surface-light: #21262d;
+      --border: #30363d;
+      --text: #f0f6fc;
+      --muted: #8b949e;
+      --open: #3fb950;
+      --wait: #d29922;
+      --error: #f85149;
+      --idle: #8b949e;
+      --accent: #58a6ff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(
+          circle at top,
+          rgba(88, 166, 255, 0.12),
+          transparent 34rem
+        ),
+        var(--background);
+      color: var(--text);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "Noto Sans KR",
+        sans-serif;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .container {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 72px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(28px, 5vw, 46px);
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .service-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(22, 27, 34, 0.84);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .service-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--idle);
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 30px;
+    }
+
+    .summary-card,
+    .theater-card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(22, 27, 34, 0.92);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+    }
+
+    .summary-card {
+      padding: 18px;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .summary-value {
+      font-size: 17px;
+      font-weight: 700;
+      word-break: keep-all;
+    }
+
+    .section-title {
+      margin: 0 0 16px;
+      font-size: 22px;
+    }
+
+    .theater-list {
+      display: grid;
+      gap: 18px;
+    }
+
+    .theater-card {
+      padding: 22px;
+    }
+
+    .theater-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .theater-name {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .booking-link {
+      padding: 9px 13px;
+      border-radius: 10px;
+      background: var(--surface-light);
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .booking-link:hover {
+      text-decoration: underline;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 12px;
+    }
+
+    .result-card {
+      padding: 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-light);
+    }
+
+    .result-date {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .status::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .status-open {
+      color: var(--open);
+    }
+
+    .status-wait {
+      color: var(--wait);
+    }
+
+    .status-error {
+      color: var(--error);
+    }
+
+    .status-idle {
+      color: var(--idle);
+    }
+
+    .movie-name,
+    .error-message {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .loading,
+    .fatal-error {
+      padding: 32px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      text-align: center;
+      color: var(--muted);
+    }
+
+    .fatal-error {
+      color: var(--error);
+    }
+
+    .footer {
+      margin-top: 34px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 760px) {
+      .header {
+        display: block;
+      }
+
+      .service-badge {
+        margin-top: 18px;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .theater-header {
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 460px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .theater-header {
+        display: block;
+      }
+
+      .booking-link {
+        display: inline-block;
+        margin-top: 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header class="header">
+      <div>
+        <h1 class="title">CGV API Watcher</h1>
+        <p class="subtitle">
+          CGV 특별관 예매 일정의 최신 감시 상태를 보여줍니다.
+        </p>
+      </div>
+
+      <div class="service-badge">
+        <span id="service-dot" class="service-dot"></span>
+        <span id="service-status">데이터 불러오는 중</span>
+      </div>
+    </header>
+
+    <section id="summary" class="summary-grid"></section>
+
+    <section>
+      <h2 class="section-title">극장별 감시 상태</h2>
+      <div id="content" class="loading">
+        상태 정보를 불러오는 중입니다.
+      </div>
+    </section>
+
+    <footer class="footer">
+      자동 예매·좌석 선택·결제 기능은 수행하지 않습니다.<br>
+      GitHub Actions 스케줄은 서버 상황에 따라 지연될 수 있습니다.
+    </footer>
+  </main>
+
+  <script>
+    const STATUS_LABELS = {
+      OPEN: "예매 오픈",
+      WAIT: "특별관 미오픈",
+      ERROR: "조회 오류",
+      NO_SCHEDULE: "영화 일정 없음",
+    };
+
+    const STATUS_CLASSES = {
+      OPEN: "status-open",
+      WAIT: "status-wait",
+      ERROR: "status-error",
+      NO_SCHEDULE: "status-idle",
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderSummary(data) {
+      const summary = document.getElementById("summary");
+
+      summary.innerHTML = `
+        <article class="summary-card">
+          <div class="summary-label">감시 영화</div>
+          <div class="summary-value">
+            ${escapeHtml(data.movie_keyword)}
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-label">감시 기간</div>
+          <div class="summary-value">
+            ${escapeHtml(data.date_from)}
+            ~
+            ${escapeHtml(data.date_to)}
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-label">감시 극장</div>
+          <div class="summary-value">
+            ${data.theaters.length}개
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-label">마지막 확인</div>
+          <div class="summary-value">
+            ${escapeHtml(data.checked_at_display)}
+          </div>
+        </article>
+      `;
+    }
+
+    function renderResult(result) {
+      const status = result.status || "NO_SCHEDULE";
+      const statusClass =
+        STATUS_CLASSES[status] || "status-idle";
+      const statusLabel =
+        STATUS_LABELS[status] || status;
+
+      const movieName = result.movie_name
+        ? `<div class="movie-name">
+             ${escapeHtml(result.movie_name)}
+           </div>`
+        : "";
+
+      const errorMessage = result.error
+        ? `<div class="error-message">
+             ${escapeHtml(result.error)}
+           </div>`
+        : "";
+
+      return `
+        <article class="result-card">
+          <div class="result-date">
+            ${escapeHtml(result.date)}
+          </div>
+
+          <div class="status ${statusClass}">
+            ${escapeHtml(statusLabel)}
+          </div>
+
+          ${movieName}
+          ${errorMessage}
+        </article>
+      `;
+    }
+
+    function renderTheaters(data) {
+      const content = document.getElementById("content");
+
+      if (!data.theaters.length) {
+        content.className = "loading";
+        content.textContent = "설정된 극장이 없습니다.";
+        return;
+      }
+
+      content.className = "theater-list";
+      content.innerHTML = data.theaters
+        .map((theater) => `
+          <article class="theater-card">
+            <div class="theater-header">
+              <h3 class="theater-name">
+                ${escapeHtml(theater.name)}
+              </h3>
+
+              <a
+                class="booking-link"
+                href="${escapeHtml(theater.booking_url)}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                CGV 예매 페이지
+              </a>
+            </div>
+
+            <div class="result-grid">
+              ${theater.results.map(renderResult).join("")}
+            </div>
+          </article>
+        `)
+        .join("");
+    }
+
+    function updateServiceStatus(data) {
+      const label = document.getElementById("service-status");
+      const dot = document.getElementById("service-dot");
+
+      if (data.status === "OPEN") {
+        label.textContent = "예매 오픈 감지";
+        dot.style.background = "var(--open)";
+        return;
+      }
+
+      if (data.status === "DEGRADED") {
+        label.textContent = "일부 조회 오류";
+        dot.style.background = "var(--error)";
+        return;
+      }
+
+      label.textContent = "정상 감시 중";
+      dot.style.background = "var(--open)";
+    }
+
+    async function loadStatus() {
+      try {
+        const response = await fetch(
+          `status.json?timestamp=${Date.now()}`,
+          { cache: "no-store" },
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `HTTP ${response.status}: 상태 파일을 읽지 못했습니다.`,
+          );
+        }
+
+        const data = await response.json();
+
+        renderSummary(data);
+        renderTheaters(data);
+        updateServiceStatus(data);
+      } catch (error) {
+        const content = document.getElementById("content");
+        const status = document.getElementById("service-status");
+        const dot = document.getElementById("service-dot");
+
+        content.className = "fatal-error";
+        content.textContent =
+          `상태 정보를 불러오지 못했습니다: ${error.message}`;
+
+        status.textContent = "데이터 오류";
+        dot.style.background = "var(--error)";
+      }
+    }
+
+    loadStatus();
+    setInterval(loadStatus, 60_000);
+  </script>
+</body>
+</html>
