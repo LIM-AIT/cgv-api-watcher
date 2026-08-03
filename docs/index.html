@@ -1541,7 +1541,7 @@
       #live-panel,
       .live-panel {
         margin-top: 10px !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 18px !important;
         min-height: 50px !important;
         padding: 10px 12px !important;
       }
@@ -1821,7 +1821,7 @@
       }
 
       header .developer-credit {
-        margin-top: 6px !important;
+        margin-top: 8px !important;
         font-size: 10px !important;
       }
     }
@@ -2045,6 +2045,45 @@
         position: relative !important;
         top: 8px !important;
         margin-bottom: 8px !important;
+      }
+    }
+
+  
+
+    /* move title group downward */
+    @media (max-width: 640px) {
+      header .brand h1 {
+        position: relative !important;
+        top: 18px !important;
+        margin-bottom: 14px !important;
+      }
+
+      header .developer-credit {
+        position: relative !important;
+        top: 6px !important;
+        margin-top: 4px !important;
+      }
+    }
+
+  
+
+    /* move cloud monitoring downward */
+    @media (max-width: 640px) {
+      header .eyebrow {
+        position: relative !important;
+        top: 4px !important;
+      }
+    }
+
+  
+
+    /* force developer credit downward */
+    @media (max-width: 640px) {
+      header .developer-credit {
+        position: relative !important;
+        top: 16px !important;
+        margin-top: 6px !important;
+        margin-bottom: 16px !important;
       }
     }
 
