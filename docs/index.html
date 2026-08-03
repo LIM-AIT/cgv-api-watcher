@@ -617,6 +617,9 @@
 
   <script>
     const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+    const RAW_STATUS_URL =
+      "https://raw.githubusercontent.com/" +
+      "LIM-AIT/cgv-api-watcher/main/docs/status.json";
     const WARNING_DELAY_MS = 10 * 60 * 1000;
     const ERROR_DELAY_MS = 15 * 60 * 1000;
 
@@ -949,8 +952,13 @@
 
       try {
         const response = await fetch(
-          `status.json?timestamp=${Date.now()}`,
-          { cache: "no-store" },
+          `${RAW_STATUS_URL}?timestamp=${Date.now()}`,
+          {
+            cache: "no-store",
+            headers: {
+              Accept: "application/json",
+            },
+          },
         );
 
         if (!response.ok) {
