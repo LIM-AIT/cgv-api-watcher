@@ -2,10 +2,9 @@ name: CGV Watcher
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "2,7,12,17,22,27,32,37,42,47,52,57 * * * *"
 
 permissions:
+  actions: write
   contents: write
 
 concurrency:
@@ -15,6 +14,7 @@ concurrency:
 jobs:
   watch:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
 
     steps:
       - name: Checkout repository
@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             cgv-watcher-state-
 
-      - name: Run watcher once
+      - name: Run continuous watcher
         env:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
@@ -50,7 +50,53 @@ jobs:
           INTERVAL_SECONDS: "300"
           REQUEST_TIMEOUT_SECONDS: "20"
           USE_COLOR: "false"
-        run: python run.py --once
+        run: |
+          set +e
+
+          # 5분 간격 × 60회 = 약 5시간
+          for cycle in $(seq 1 60); do
+            cycle_started=$(date +%s)
+
+            echo "========================================"
+            echo "Watcher cycle ${cycle}/60"
+            echo "Started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "========================================"
+
+            python run.py --once
+            watcher_exit=$?
+
+            if [ "$watcher_exit" -ne 0 ]; then
+              echo "Watcher failed with exit code ${watcher_exit}."
+              echo "The next cycle will continue."
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email \
+              "41898282+github-actions[bot]@users.noreply.github.com"
+
+            git add docs/status.json
+
+            if ! git diff --cached --quiet; then
+              git commit -m "Update dashboard status [skip ci]"
+
+              # 원격 main이 갱신된 경우 재시도
+              git push origin HEAD:main || {
+                git pull --rebase origin main
+                git push origin HEAD:main
+              }
+            else
+              echo "No dashboard status changes."
+            fi
+
+            cycle_finished=$(date +%s)
+            elapsed=$((cycle_finished - cycle_started))
+            sleep_seconds=$((300 - elapsed))
+
+            if [ "$cycle" -lt 60 ] && [ "$sleep_seconds" -gt 0 ]; then
+              echo "Next check in ${sleep_seconds} seconds."
+              sleep "$sleep_seconds"
+            fi
+          done
 
       - name: Save watcher state
         if: always()
@@ -59,18 +105,17 @@ jobs:
           path: state.json
           key: cgv-watcher-state-${{ github.run_id }}
 
-      - name: Commit dashboard status
+      - name: Start next watcher session
         if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "Starting the next continuous watcher session."
 
-          git add docs/status.json
-
-          if git diff --cached --quiet; then
-            echo "No dashboard status changes."
-            exit 0
-          fi
-
-          git commit -m "Update dashboard status [skip ci]"
-          git push origin main
+          curl --fail-with-body \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/watch.yml/dispatches" \
+            --data '{"ref":"main"}'
