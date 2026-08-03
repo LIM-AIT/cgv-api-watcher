@@ -2582,11 +2582,11 @@ function escapeHtml(value) {
 
       try {
         const response = await fetch(
-          `${RAW_STATUS_URL}?timestamp=${Date.now()}`,
+          `https://api.github.com/repos/LIM-AIT/cgv-api-watcher/contents/docs/status.json?ref=main&timestamp=${Date.now()}`,
           {
             cache: "no-store",
             headers: {
-              Accept: "application/json",
+              Accept: "application/vnd.github.raw+json",
             },
           },
         );
@@ -2636,6 +2636,13 @@ function escapeHtml(value) {
       updateLiveMonitor,
       1000,
     );
+
+    // Check the latest GitHub status every 150 seconds.
+    setInterval(() => {
+      if (!document.hidden) {
+        loadStatus();
+      }
+    }, 150000);
 
     loadStatus();
   </script>
