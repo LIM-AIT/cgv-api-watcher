@@ -1,0 +1,16 @@
+[project]
+name = "cgv-imax-api-watcher"
+version = "1.0.1"
+description = "Monitor CGV IMAX schedule openings and send email alerts."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
