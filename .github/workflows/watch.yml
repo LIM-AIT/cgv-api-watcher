@@ -47,18 +47,18 @@ jobs:
           DATE_FROM: ${{ secrets.DATE_FROM }}
           DATE_TO: ${{ secrets.DATE_TO }}
           MOVIE_KEYWORD: ${{ secrets.MOVIE_KEYWORD }}
-          INTERVAL_SECONDS: "300"
+          INTERVAL_SECONDS: "150"
           REQUEST_TIMEOUT_SECONDS: "20"
           USE_COLOR: "false"
         run: |
           set +e
 
           # 5분 간격 × 60회 = 약 5시간
-          for cycle in $(seq 1 60); do
+          for cycle in $(seq 1 120); do
             cycle_started=$(date +%s)
 
             echo "========================================"
-            echo "Watcher cycle ${cycle}/60"
+            echo "Watcher cycle ${cycle}/120"
             echo "Started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "========================================"
 
@@ -90,9 +90,9 @@ jobs:
 
             cycle_finished=$(date +%s)
             elapsed=$((cycle_finished - cycle_started))
-            sleep_seconds=$((300 - elapsed))
+            sleep_seconds=$((150 - elapsed))
 
-            if [ "$cycle" -lt 60 ] && [ "$sleep_seconds" -gt 0 ]; then
+            if [ "$cycle" -lt 120 ] && [ "$sleep_seconds" -gt 0 ]; then
               echo "Next check in ${sleep_seconds} seconds."
               sleep "$sleep_seconds"
             fi
