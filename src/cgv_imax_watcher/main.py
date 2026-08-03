@@ -13,6 +13,7 @@ from .email_service import send_email
 from .models import WatchResult
 from .notifier import notify_new
 from .state import load_state, reset_state
+from .status_exporter import export_status
 
 
 def run_check(session, cfg: Config) -> list[WatchResult]:
@@ -77,6 +78,13 @@ def main() -> int:
             check_count += 1
             try:
                 results = run_check(session, cfg)
+
+                export_status(
+                    cfg,
+                    results,
+                    base_dir / "docs" / "status.json",
+                )
+
                 email_status = notify_new(
                     cfg, results, state, state_path
                 )
