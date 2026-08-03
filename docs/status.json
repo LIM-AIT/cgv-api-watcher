@@ -1,17 +1,35 @@
 {
   "service": "CGV API Watcher",
   "status": "RUNNING",
-  "checked_at": "2026-08-03T16:25:14+09:00",
-  "checked_at_display": "2026-08-03 16:25:14 KST",
+  "checked_at": "2026-08-03T16:33:49+09:00",
+  "checked_at_display": "2026-08-03 16:33:49 KST",
   "movie_keyword": "스파이더맨",
-  "date_from": "2026-08-07",
+  "date_from": "2026-08-05",
   "date_to": "2026-08-09",
   "theaters": [
     {
-      "name": "영등포타임스퀘어",
-      "site_no": "0059",
-      "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
+      "name": "용산아이파크몰",
+      "site_no": "0013",
+      "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%9A%A9%EC%82%B0%EC%95%84%EC%9D%B4%ED%8C%8C%ED%81%AC%EB%AA%B0&siteNo=0013",
       "results": [
+        {
+          "date": "2026-08-05",
+          "movie_found": true,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "error": "",
+          "status": "WAIT"
+        },
+        {
+          "date": "2026-08-06",
+          "movie_found": true,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "error": "",
+          "status": "WAIT"
+        },
         {
           "date": "2026-08-07",
           "movie_found": true,
@@ -42,10 +60,28 @@
       ]
     },
     {
-      "name": "용산아이파크몰",
-      "site_no": "0013",
-      "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%9A%A9%EC%82%B0%EC%95%84%EC%9D%B4%ED%8C%8C%ED%81%AC%EB%AA%B0&siteNo=0013",
+      "name": "영등포타임스퀘어",
+      "site_no": "0059",
+      "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
       "results": [
+        {
+          "date": "2026-08-05",
+          "movie_found": true,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "error": "",
+          "status": "WAIT"
+        },
+        {
+          "date": "2026-08-06",
+          "movie_found": true,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "error": "",
+          "status": "WAIT"
+        },
         {
           "date": "2026-08-07",
           "movie_found": true,
