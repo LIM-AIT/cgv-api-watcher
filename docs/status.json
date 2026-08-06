@@ -1,8 +1,8 @@
 {
   "service": "CGV API Watcher",
   "status": "RUNNING",
-  "checked_at": "2026-08-06T11:06:20+09:00",
-  "checked_at_display": "2026-08-06 11:06:20 KST",
+  "checked_at": "2026-08-06T11:08:50+09:00",
+  "checked_at_display": "2026-08-06 11:08:50 KST",
   "movie_keyword": "스파이더맨",
   "date_from": "2026-08-05",
   "date_to": "2026-08-09",
