@@ -1,0 +1,91 @@
+name: Add Weekday To Dates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/add-weekday-to-dates.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-dates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Add Korean weekday labels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    function formatDate(value) {
+      if (!value) return "-";
+      const [, month, day] = value.split("-");
+      return month && day ? `${month}/${day}` : value;
+    }
+'''
+
+          new = '''    function formatDate(value) {
+      if (!value) return "-";
+
+      const [year, month, day] = value.split("-");
+      if (!year || !month || !day) return value;
+
+      const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+      const parsed = new Date(
+        Date.UTC(Number(year), Number(month) - 1, Number(day)),
+      );
+      const weekday = weekdays[parsed.getUTCDay()] || "";
+
+      return `${month}/${day} ${weekday}`;
+    }
+'''
+
+          if old not in text:
+              raise SystemExit("formatDate function was not found")
+
+          text = text.replace(old, new, 1)
+
+          css_marker = '''
+    /* weekday date label mobile fit v1 */
+    @media (max-width: 640px) {
+      .result-row {
+        grid-template-columns: 62px minmax(0, 1fr) auto !important;
+      }
+
+      .result-date {
+        font-size: 11px !important;
+        letter-spacing: -0.02em !important;
+        white-space: nowrap !important;
+      }
+    }
+'''
+
+          if "weekday date label mobile fit v1" not in text:
+              text = text.replace("  </style>", css_marker + "\n  </style>", 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Show Korean weekdays next to dates [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          else
+            echo "Weekday labels already applied."
+          fi
