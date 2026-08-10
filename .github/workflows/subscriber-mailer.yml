@@ -64,11 +64,12 @@ jobs:
         run: |
           set +e
 
-          for cycle in $(seq 1 120); do
+          # 30초 간격 × 600회 = 약 5시간
+          for cycle in $(seq 1 600); do
             cycle_started=$(date +%s)
 
             echo "========================================"
-            echo "Subscriber mailer cycle ${cycle}/120"
+            echo "Subscriber mailer cycle ${cycle}/600"
             echo "Started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "========================================"
 
@@ -82,9 +83,9 @@ jobs:
 
             cycle_finished=$(date +%s)
             elapsed=$((cycle_finished - cycle_started))
-            sleep_seconds=$((150 - elapsed))
+            sleep_seconds=$((30 - elapsed))
 
-            if [ "$cycle" -lt 120 ] && [ "$sleep_seconds" -gt 0 ]; then
+            if [ "$cycle" -lt 600 ] && [ "$sleep_seconds" -gt 0 ]; then
               echo "Next subscriber check in ${sleep_seconds} seconds."
               sleep "$sleep_seconds"
             fi
