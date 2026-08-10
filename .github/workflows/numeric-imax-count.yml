@@ -1,0 +1,52 @@
+name: Numeric IMAX Count
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/numeric-imax-count.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-count:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Show numeric IMAX count only
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old = '<div class="imax-count">${count > 0 ? `${count}건` : "0건"}</div>'
+          new = '<div class="imax-count">${count}</div>'
+
+          if old not in text:
+              raise SystemExit("IMAX count renderer was not found")
+
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Show numeric IMAX counts only [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          else
+            echo "Numeric IMAX counts already applied."
+          fi
