@@ -23,55 +23,22 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
 
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
 
-          old = '''    function formatDate(value) {
-      if (!value) return "-";
-      const [, month, day] = value.split("-");
-      return month && day ? `${month}/${day}` : value;
-    }
-'''
+          pattern = r'    function formatDate\(value\) \{\n      if \(!value\) return "-";\n      const \[, month, day\] = value\.split\("-"\);\n      return month && day \? `\$\{month\}/\$\{day\}` : value;\n    \}\n'
+          replacement = '    function formatDate(value) {\n      if (!value) return "-";\n\n      const [year, month, day] = value.split("-");\n      if (!year || !month || !day) return value;\n\n      const weekdays = ["일", "월", "화", "수", "목", "금", "토"];\n      const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));\n      const weekday = weekdays[parsed.getUTCDay()] || "";\n\n      return `${month}/${day} ${weekday}`;\n    }\n'
 
-          new = '''    function formatDate(value) {
-      if (!value) return "-";
-
-      const [year, month, day] = value.split("-");
-      if (!year || !month || !day) return value;
-
-      const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-      const parsed = new Date(
-        Date.UTC(Number(year), Number(month) - 1, Number(day)),
-      );
-      const weekday = weekdays[parsed.getUTCDay()] || "";
-
-      return `${month}/${day} ${weekday}`;
-    }
-'''
-
-          if old not in text:
+          updated, count = re.subn(pattern, lambda _: replacement, text, count=1)
+          if count != 1:
               raise SystemExit("formatDate function was not found")
+          text = updated
 
-          text = text.replace(old, new, 1)
-
-          css_marker = '''
-    /* weekday date label mobile fit v1 */
-    @media (max-width: 640px) {
-      .result-row {
-        grid-template-columns: 62px minmax(0, 1fr) auto !important;
-      }
-
-      .result-date {
-        font-size: 11px !important;
-        letter-spacing: -0.02em !important;
-        white-space: nowrap !important;
-      }
-    }
-'''
-
+          css = '\n    /* weekday date label mobile fit v1 */\n    @media (max-width: 640px) {\n      .result-row {\n        grid-template-columns: 62px minmax(0, 1fr) auto !important;\n      }\n\n      .result-date {\n        font-size: 11px !important;\n        letter-spacing: -0.02em !important;\n        white-space: nowrap !important;\n      }\n    }\n'
           if "weekday date label mobile fit v1" not in text:
-              text = text.replace("  </style>", css_marker + "\n  </style>", 1)
+              text = text.replace("  </style>", css + "\n  </style>", 1)
 
           path.write_text(text, encoding="utf-8")
           PY
