@@ -1,0 +1,57 @@
+name: Set Chat Cooldown 2s
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/set-chat-cooldown-2s.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Change chat cooldown to 2 seconds
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          chat = Path("docs/chat.js")
+          text = chat.read_text(encoding="utf-8")
+
+          old_cooldown = "const SEND_COOLDOWN_MS = 5000;"
+          old_note = "전송 간격 5초"
+          if old_cooldown not in text:
+              raise SystemExit("Expected 5-second cooldown was not found")
+          if old_note not in text:
+              raise SystemExit("Expected 5-second UI note was not found")
+
+          text = text.replace(old_cooldown, "const SEND_COOLDOWN_MS = 2000;", 1)
+          text = text.replace(old_note, "전송 간격 2초", 1)
+          chat.write_text(text, encoding="utf-8")
+
+          index = Path("docs/index.html")
+          html = index.read_text(encoding="utf-8")
+          old_asset = './chat.js?v=3'
+          if old_asset not in html:
+              raise SystemExit("Expected chat.js?v=3 asset reference was not found")
+          html = html.replace(old_asset, './chat.js?v=4', 1)
+          index.write_text(html, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/chat.js docs/index.html
+          git commit -m "Reduce chat send cooldown to 2 seconds [skip ci]"
+          git push origin HEAD:main || {
+            git pull --rebase origin main
+            git push origin HEAD:main
+          }
