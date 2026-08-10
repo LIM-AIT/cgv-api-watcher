@@ -2,6 +2,11 @@ name: CGV Watcher
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/watch.yml"
 
 permissions:
   actions: write
@@ -30,6 +35,33 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Update dashboard movie header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace("CGV IMAX Spider-Man", "CGV IMAX 오디세이")
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/index.html
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Switch dashboard header to Odyssey [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          else
+            echo "Dashboard header is already up to date."
+          fi
+
       - name: Restore watcher state
         uses: actions/cache@v4
         with:
@@ -44,16 +76,16 @@ jobs:
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
           THEATERS: ${{ secrets.THEATERS }}
-          DATE_FROM: ${{ secrets.DATE_FROM }}
-          DATE_TO: ${{ secrets.DATE_TO }}
-          MOVIE_KEYWORD: ${{ secrets.MOVIE_KEYWORD }}
+          DATE_FROM: "2026-08-10"
+          DATE_TO: "2026-08-16"
+          MOVIE_KEYWORD: "오디세이"
           INTERVAL_SECONDS: "150"
           REQUEST_TIMEOUT_SECONDS: "20"
           USE_COLOR: "false"
         run: |
           set +e
 
-          # 5분 간격 × 60회 = 약 5시간
+          # 2분 30초 간격 × 120회 = 약 5시간
           for cycle in $(seq 1 120); do
             cycle_started=$(date +%s)
 
