@@ -5,8 +5,14 @@ const SUPABASE_KEY = "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC";
 const TABLE = "cgv_chat_messages";
 const MAX_MESSAGES = 50;
 const SEND_COOLDOWN_MS = 5000;
+const PRESENCE_CHANNEL = "cgv-imax-live-chat";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const clientId = globalThis.crypto?.randomUUID?.() || `client-${Date.now()}-${Math.random()}`;
+
+let realtimeChannel = null;
+let presenceNickname = "";
+let presenceInputTimer = null;
 
 function formatTime(value) {
   const date = new Date(value);
@@ -16,6 +22,10 @@ function formatTime(value) {
     minute: "2-digit",
     hour12: false,
   }).format(date);
+}
+
+function normalizeNickname(value) {
+  return String(value || "").trim().slice(0, 20);
 }
 
 function buildChat() {
@@ -33,32 +43,54 @@ function buildChat() {
       <span id="imax-chat-status" class="imax-chat-status">연결 중</span>
     </div>
 
-    <div id="imax-chat-list" class="imax-chat-list" aria-live="polite">
-      <div class="imax-chat-empty">채팅을 불러오는 중입니다.</div>
-    </div>
+    <div class="imax-chat-body">
+      <div class="imax-chat-main">
+        <div id="imax-chat-list" class="imax-chat-list" aria-live="polite">
+          <div class="imax-chat-empty">채팅을 불러오는 중입니다.</div>
+        </div>
 
-    <form id="imax-chat-form" class="imax-chat-form">
-      <input
-        id="imax-chat-name"
-        class="imax-chat-name"
-        type="text"
-        maxlength="20"
-        autocomplete="nickname"
-        placeholder="닉네임"
-        required
-      >
-      <input
-        id="imax-chat-message"
-        class="imax-chat-message"
-        type="text"
-        maxlength="300"
-        autocomplete="off"
-        placeholder="메시지를 입력하세요..."
-        required
-      >
-      <button id="imax-chat-send" class="imax-chat-send" type="submit">전송</button>
-    </form>
-    <div class="imax-chat-note">최근 50개 메시지 · 전송 간격 5초</div>
+        <form id="imax-chat-form" class="imax-chat-form">
+          <input
+            id="imax-chat-name"
+            class="imax-chat-name"
+            type="text"
+            maxlength="20"
+            autocomplete="nickname"
+            placeholder="닉네임"
+            required
+          >
+          <input
+            id="imax-chat-message"
+            class="imax-chat-message"
+            type="text"
+            maxlength="300"
+            autocomplete="off"
+            placeholder="메시지를 입력하세요..."
+            required
+          >
+          <button id="imax-chat-send" class="imax-chat-send" type="submit">전송</button>
+        </form>
+        <div class="imax-chat-note">최근 50개 메시지 · 전송 간격 5초</div>
+      </div>
+
+      <aside id="imax-chat-presence" class="imax-chat-presence" aria-label="현재 접속자">
+        <button
+          id="imax-chat-presence-toggle"
+          class="imax-chat-presence-toggle"
+          type="button"
+          aria-expanded="false"
+        >
+          <span class="imax-chat-presence-title">
+            <span class="imax-chat-online-dot"></span>
+            접속 중 <strong id="imax-chat-presence-count">0</strong>명
+          </span>
+          <span class="imax-chat-presence-chevron" aria-hidden="true">›</span>
+        </button>
+        <div id="imax-chat-presence-list" class="imax-chat-presence-list">
+          <div class="imax-chat-presence-empty">닉네임을 입력하면 접속자 목록에 표시됩니다.</div>
+        </div>
+      </aside>
+    </div>
   `;
 
   const footer = document.querySelector("footer");
@@ -143,26 +175,149 @@ async function loadMessages() {
   if (list) list.scrollTop = list.scrollHeight;
 }
 
+function renderPresence(state) {
+  const list = document.getElementById("imax-chat-presence-list");
+  const count = document.getElementById("imax-chat-presence-count");
+  if (!list || !count) return;
+
+  const users = new Map();
+
+  Object.values(state || {}).flat().forEach((meta) => {
+    const nickname = normalizeNickname(meta?.nickname);
+    if (!nickname) return;
+
+    const key = nickname.toLocaleLowerCase("ko-KR");
+    if (!users.has(key)) {
+      users.set(key, nickname);
+    }
+  });
+
+  const nicknames = [...users.values()].sort((a, b) =>
+    a.localeCompare(b, "ko-KR"),
+  );
+
+  count.textContent = String(nicknames.length);
+  list.innerHTML = "";
+
+  if (!nicknames.length) {
+    const empty = document.createElement("div");
+    empty.className = "imax-chat-presence-empty";
+    empty.textContent = "닉네임을 입력하면 접속자 목록에 표시됩니다.";
+    list.appendChild(empty);
+    return;
+  }
+
+  nicknames.forEach((nickname) => {
+    const item = document.createElement("div");
+    item.className = "imax-chat-presence-user";
+
+    const dot = document.createElement("span");
+    dot.className = "imax-chat-online-dot";
+
+    const name = document.createElement("span");
+    name.className = "imax-chat-presence-name";
+    name.textContent = nickname;
+
+    item.append(dot, name);
+
+    if (
+      presenceNickname &&
+      nickname.toLocaleLowerCase("ko-KR") ===
+        presenceNickname.toLocaleLowerCase("ko-KR")
+    ) {
+      const me = document.createElement("span");
+      me.className = "imax-chat-presence-me";
+      me.textContent = "나";
+      item.appendChild(me);
+    }
+
+    list.appendChild(item);
+  });
+}
+
+async function updatePresence(rawNickname) {
+  const nickname = normalizeNickname(rawNickname);
+  presenceNickname = nickname;
+
+  if (!realtimeChannel) return;
+
+  try {
+    if (!nickname) {
+      await realtimeChannel.untrack();
+      return;
+    }
+
+    await realtimeChannel.track({
+      client_id: clientId,
+      nickname,
+      online_at: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Presence update failed", error);
+  }
+}
+
 function subscribeRealtime() {
   const status = document.getElementById("imax-chat-status");
+  const nameInput = document.getElementById("imax-chat-name");
 
-  supabase
-    .channel("cgv-imax-live-chat")
+  realtimeChannel = supabase
+    .channel(PRESENCE_CHANNEL, {
+      config: {
+        presence: { key: clientId },
+      },
+    })
     .on(
       "postgres_changes",
       { event: "INSERT", schema: "public", table: TABLE },
       (payload) => appendMessage(payload.new),
     )
-    .subscribe((state) => {
-      if (!status) return;
+    .on("presence", { event: "sync" }, () => {
+      renderPresence(realtimeChannel.presenceState());
+    })
+    .on("presence", { event: "join" }, () => {
+      renderPresence(realtimeChannel.presenceState());
+    })
+    .on("presence", { event: "leave" }, () => {
+      renderPresence(realtimeChannel.presenceState());
+    })
+    .subscribe(async (state) => {
       if (state === "SUBSCRIBED") {
-        status.textContent = "실시간 연결";
-        status.classList.add("connected");
+        if (status) {
+          status.textContent = "실시간 연결";
+          status.classList.add("connected");
+        }
+        await updatePresence(nameInput?.value);
       } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") {
-        status.textContent = "연결 재시도 중";
-        status.classList.remove("connected");
+        if (status) {
+          status.textContent = "연결 재시도 중";
+          status.classList.remove("connected");
+        }
       }
     });
+}
+
+function bindPresenceControls() {
+  const panel = document.getElementById("imax-chat-presence");
+  const toggle = document.getElementById("imax-chat-presence-toggle");
+  const nameInput = document.getElementById("imax-chat-name");
+
+  toggle?.addEventListener("click", () => {
+    if (!panel) return;
+    const isOpen = panel.classList.toggle("open");
+    toggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  nameInput?.addEventListener("input", () => {
+    clearTimeout(presenceInputTimer);
+    presenceInputTimer = window.setTimeout(() => {
+      const nickname = normalizeNickname(nameInput.value);
+      if (nickname) {
+        localStorage.setItem("cgv-chat-nickname", nickname);
+      }
+      updatePresence(nickname);
+    }, 500);
+  });
 }
 
 function bindForm() {
@@ -175,7 +330,7 @@ function bindForm() {
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const nickname = nameInput?.value.trim() || "";
+    const nickname = normalizeNickname(nameInput?.value);
     const message = messageInput?.value.trim() || "";
 
     if (!nickname || !message) return;
@@ -188,6 +343,7 @@ function bindForm() {
     }
 
     localStorage.setItem("cgv-chat-nickname", nickname);
+    await updatePresence(nickname);
 
     const { error } = await supabase
       .from(TABLE)
@@ -215,6 +371,7 @@ function bindForm() {
 async function initChat() {
   buildChat();
   bindForm();
+  bindPresenceControls();
   await loadMessages();
   subscribeRealtime();
 }
