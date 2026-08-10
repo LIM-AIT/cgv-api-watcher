@@ -4,8 +4,8 @@
   "checked_at": "2026-08-10T14:27:56+09:00",
   "checked_at_display": "2026-08-10 14:27:56 KST",
   "movie_keyword": "오디세이",
-  "date_from": "2026-08-10",
-  "date_to": "2026-08-16",
+  "date_from": "2026-08-25",
+  "date_to": "2026-09-02",
   "theaters": [
     {
       "name": "용산아이파크몰",
@@ -13,16 +13,7 @@
       "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%9A%A9%EC%82%B0%EC%95%84%EC%9D%B4%ED%8C%8C%ED%81%AC%EB%AA%B0&siteNo=0013",
       "results": [
         {
-          "date": "2026-08-10",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 3,
-          "movie_name": "오디세이",
-          "error": "",
-          "status": "OPEN"
-        },
-        {
-          "date": "2026-08-11",
+          "date": "2026-08-25",
           "movie_found": true,
           "imax_open": true,
           "imax_count": 6,
@@ -31,49 +22,76 @@
           "status": "OPEN"
         },
         {
-          "date": "2026-08-12",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-26",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-13",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-27",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-14",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-28",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-15",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-29",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-16",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-30",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-08-31",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-01",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-02",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
         }
       ]
     },
@@ -83,16 +101,7 @@
       "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
       "results": [
         {
-          "date": "2026-08-10",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 3,
-          "movie_name": "오디세이",
-          "error": "",
-          "status": "OPEN"
-        },
-        {
-          "date": "2026-08-11",
+          "date": "2026-08-25",
           "movie_found": true,
           "imax_open": true,
           "imax_count": 6,
@@ -101,49 +110,76 @@
           "status": "OPEN"
         },
         {
-          "date": "2026-08-12",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-26",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-13",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-27",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-14",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-28",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-15",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-29",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
         },
         {
-          "date": "2026-08-16",
-          "movie_found": true,
-          "imax_open": true,
-          "imax_count": 6,
-          "movie_name": "오디세이",
+          "date": "2026-08-30",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
           "error": "",
-          "status": "OPEN"
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-08-31",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-01",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-02",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
         }
       ]
     }
