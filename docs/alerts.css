@@ -1,0 +1,194 @@
+.imax-email-alert {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.9fr);
+  gap: 18px 24px;
+  align-items: center;
+  width: 100%;
+  margin: 0 0 22px;
+  padding: 18px;
+  border: 1px solid rgba(88, 166, 255, 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(88, 166, 255, 0.08), transparent 55%),
+    rgba(22, 27, 34, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.imax-email-alert-copy {
+  min-width: 0;
+}
+
+.imax-email-alert-kicker {
+  margin-bottom: 5px;
+  color: #79c0ff;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.imax-email-alert h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+
+.imax-email-alert p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.imax-email-alert-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.imax-email-alert-input,
+.imax-email-alert-button {
+  height: 42px;
+  border-radius: 11px;
+  font: inherit;
+}
+
+.imax-email-alert-input {
+  min-width: 0;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  outline: none;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.imax-email-alert-input:focus {
+  border-color: rgba(88, 166, 255, 0.72);
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+}
+
+.imax-email-alert-button {
+  min-width: 92px;
+  padding: 0 14px;
+  border: 1px solid rgba(88, 166, 255, 0.48);
+  background: rgba(88, 166, 255, 0.16);
+  color: #a5d6ff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.imax-email-alert-button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.imax-email-alert-consent {
+  grid-column: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: -8px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.imax-email-alert-consent input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  flex: 0 0 13px;
+  accent-color: #58a6ff;
+}
+
+.imax-email-alert-status {
+  grid-column: 2;
+  min-height: 18px;
+  margin-top: -10px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.imax-email-alert-status[data-type="success"] {
+  color: #7ee787;
+}
+
+.imax-email-alert-status[data-type="pending"] {
+  color: #d2a8ff;
+}
+
+.imax-email-alert-status[data-type="error"] {
+  color: #ff7b72;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 700px) {
+  .imax-email-alert {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 11px;
+    margin-bottom: 15px;
+    padding: 13px;
+    border-radius: 15px;
+  }
+
+  .imax-email-alert h2 {
+    font-size: 15px;
+  }
+
+  .imax-email-alert p {
+    margin-top: 5px;
+    font-size: 10px;
+  }
+
+  .imax-email-alert-form {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    gap: 6px;
+  }
+
+  .imax-email-alert-input,
+  .imax-email-alert-button {
+    height: 40px;
+  }
+
+  /* Keep iOS Safari from zooming the page when the email field receives focus. */
+  .imax-email-alert-input {
+    padding: 0 9px;
+    font-size: 16px !important;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .imax-email-alert-button {
+    min-width: 0;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .imax-email-alert-consent,
+  .imax-email-alert-status {
+    grid-column: 1;
+    margin-top: 0;
+  }
+
+  .imax-email-alert-consent {
+    font-size: 9px;
+  }
+
+  .imax-email-alert-status {
+    font-size: 9px;
+  }
+}
