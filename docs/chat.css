@@ -357,16 +357,18 @@
   .imax-chat-message,
   .imax-chat-send {
     height: 38px;
-    font-size: 10px;
   }
 
+  /* iOS Safari auto-zooms focused inputs below 16px. */
   .imax-chat-name,
   .imax-chat-message {
     padding: 0 8px;
+    font-size: 16px;
   }
 
   .imax-chat-send {
     min-width: 0;
     padding: 0 7px;
+    font-size: 10px;
   }
 }
