@@ -27,15 +27,29 @@ jobs:
         with:
           ref: main
 
-      - name: Update dashboard movie header
+      - name: Update dashboard and attach realtime chat
         run: |
           python - <<'PY'
           from pathlib import Path
 
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
+
           for old in ("CGV IMAX Spider-Man", "CGV IMAX 오디세이"):
               text = text.replace(old, "CGV IMAX The Odyssey")
+
+          if "./chat.css" not in text:
+              text = text.replace(
+                  "</head>",
+                  '  <link rel="stylesheet" href="./chat.css?v=1">\n</head>',
+              )
+
+          if "./chat.js" not in text:
+              text = text.replace(
+                  "</body>",
+                  '  <script type="module" src="./chat.js?v=1"></script>\n</body>',
+              )
+
           path.write_text(text, encoding="utf-8")
           PY
 
@@ -46,13 +60,13 @@ jobs:
           git add docs/index.html
 
           if ! git diff --cached --quiet; then
-            git commit -m "Switch dashboard header to The Odyssey [skip ci]"
+            git commit -m "Attach realtime chat to dashboard [skip ci]"
             git push origin HEAD:main || {
               git pull --rebase origin main
               git push origin HEAD:main
             }
           else
-            echo "Dashboard header is already up to date."
+            echo "Dashboard is already up to date."
           fi
 
   watch:
@@ -74,7 +88,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Update dashboard movie header
+      - name: Ensure dashboard movie header
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -93,7 +107,7 @@ jobs:
           git add docs/index.html
 
           if ! git diff --cached --quiet; then
-            git commit -m "Switch dashboard header to The Odyssey [skip ci]"
+            git commit -m "Keep dashboard header on The Odyssey [skip ci]"
             git push origin HEAD:main || {
               git pull --rebase origin main
               git push origin HEAD:main
@@ -151,7 +165,6 @@ jobs:
             if ! git diff --cached --quiet; then
               git commit -m "Update dashboard status [skip ci]"
 
-              # 원격 main이 갱신된 경우 재시도
               git push origin HEAD:main || {
                 git pull --rebase origin main
                 git push origin HEAD:main
