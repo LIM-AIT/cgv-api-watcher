@@ -1,0 +1,54 @@
+name: Disable Mobile Chat Input Zoom
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/disable-mobile-input-zoom.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-mobile-viewport:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Disable mobile input zoom
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          index_path = Path("docs/index.html")
+          index = index_path.read_text(encoding="utf-8")
+          old = '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'
+          new = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">'
+          if old in index:
+              index = index.replace(old, new, 1)
+          elif new not in index:
+              raise SystemExit("viewport meta not found")
+          index_path.write_text(index, encoding="utf-8")
+
+          css_path = Path("docs/chat.css")
+          css = css_path.read_text(encoding="utf-8")
+          marker = "/* mobile input zoom guard v1 */"
+          if marker not in css:
+              css += '''\n\n/* mobile input zoom guard v1 */\n@media (max-width: 640px) {\n  .imax-chat-name,\n  .imax-chat-message {\n    font-size: 16px !important;\n    touch-action: manipulation;\n    -webkit-text-size-adjust: 100%;\n  }\n}\n'''
+          css_path.write_text(css, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html docs/chat.css
+          if ! git diff --cached --quiet; then
+            git commit -m "Disable mobile chat input zoom [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
