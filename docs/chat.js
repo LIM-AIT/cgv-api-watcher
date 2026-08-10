@@ -4,7 +4,7 @@ const SUPABASE_URL = "https://yxrfarlhcyaaslwmdyww.supabase.co";
 const SUPABASE_KEY = "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC";
 const TABLE = "cgv_chat_messages";
 const MAX_MESSAGES = 50;
-const SEND_COOLDOWN_MS = 5000;
+const SEND_COOLDOWN_MS = 2000;
 const FALLBACK_SYNC_MS = 60000;
 const PRESENCE_CHANNEL = "cgv-imax-live-chat";
 
@@ -83,7 +83,7 @@ function buildChat() {
           >
           <button id="imax-chat-send" class="imax-chat-send" type="submit">전송</button>
         </form>
-        <div class="imax-chat-note">최근 50개 메시지 · 전송 간격 5초 · 접속자는 닉네임 기준</div>
+        <div class="imax-chat-note">최근 50개 메시지 · 전송 간격 2초 · 접속자는 닉네임 기준</div>
       </div>
 
       <aside id="imax-chat-presence" class="imax-chat-presence" aria-label="현재 접속자">
