@@ -1,0 +1,106 @@
+name: CGV Subscriber Mailer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/subscriber-mailer.yml"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cgv-subscriber-mailer-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  start-mailer:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start continuous subscriber mailer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/subscriber-mailer.yml/dispatches" \
+            --data '{"ref":"main"}'
+
+  mailer:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run continuous subscriber mailer
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          SMTP_HOST: "smtp.gmail.com"
+          SMTP_PORT: "465"
+          SUPABASE_URL: "https://yxrfarlhcyaaslwmdyww.supabase.co"
+          STATUS_URL: "https://raw.githubusercontent.com/LIM-AIT/cgv-api-watcher/main/docs/status.json"
+          DASHBOARD_URL: "https://lim-ait.github.io/cgv-api-watcher/"
+        run: |
+          set +e
+
+          for cycle in $(seq 1 120); do
+            cycle_started=$(date +%s)
+
+            echo "========================================"
+            echo "Subscriber mailer cycle ${cycle}/120"
+            echo "Started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "========================================"
+
+            python run_subscriber_mailer.py
+            mailer_exit=$?
+
+            if [ "$mailer_exit" -ne 0 ]; then
+              echo "Subscriber mailer failed with exit code ${mailer_exit}."
+              echo "The next cycle will continue."
+            fi
+
+            cycle_finished=$(date +%s)
+            elapsed=$((cycle_finished - cycle_started))
+            sleep_seconds=$((150 - elapsed))
+
+            if [ "$cycle" -lt 120 ] && [ "$sleep_seconds" -gt 0 ]; then
+              echo "Next subscriber check in ${sleep_seconds} seconds."
+              sleep "$sleep_seconds"
+            fi
+          done
+
+      - name: Start next subscriber mailer session
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Starting the next subscriber mailer session."
+
+          curl --fail-with-body \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/subscriber-mailer.yml/dispatches" \
+            --data '{"ref":"main"}'
