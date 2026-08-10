@@ -1,11 +1,11 @@
 {
   "service": "CGV API Watcher",
-  "status": "RUNNING",
-  "checked_at": "2026-08-07T00:37:12+09:00",
-  "checked_at_display": "2026-08-07 00:37:12 KST",
-  "movie_keyword": "스파이더맨",
-  "date_from": "2026-08-05",
-  "date_to": "2026-08-09",
+  "status": "OPEN",
+  "checked_at": "2026-08-10T13:55:25+09:00",
+  "checked_at_display": "2026-08-10 13:55:25 KST",
+  "movie_keyword": "오디세이",
+  "date_from": "2026-08-10",
+  "date_to": "2026-08-16",
   "theaters": [
     {
       "name": "용산아이파크몰",
@@ -13,49 +13,67 @@
       "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%9A%A9%EC%82%B0%EC%95%84%EC%9D%B4%ED%8C%8C%ED%81%AC%EB%AA%B0&siteNo=0013",
       "results": [
         {
-          "date": "2026-08-05",
+          "date": "2026-08-10",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 3,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-06",
+          "date": "2026-08-11",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-07",
+          "date": "2026-08-12",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-08",
+          "date": "2026-08-13",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-09",
+          "date": "2026-08-14",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
+        },
+        {
+          "date": "2026-08-15",
+          "movie_found": true,
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
+          "error": "",
+          "status": "OPEN"
+        },
+        {
+          "date": "2026-08-16",
+          "movie_found": true,
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
+          "error": "",
+          "status": "OPEN"
         }
       ]
     },
@@ -65,49 +83,67 @@
       "booking_url": "https://cgv.co.kr/cnm/movieBook/cinema?siteNm=%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
       "results": [
         {
-          "date": "2026-08-05",
+          "date": "2026-08-10",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 4,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-06",
+          "date": "2026-08-11",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-07",
+          "date": "2026-08-12",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-08",
+          "date": "2026-08-13",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
         },
         {
-          "date": "2026-08-09",
+          "date": "2026-08-14",
           "movie_found": true,
-          "imax_open": false,
-          "imax_count": 0,
-          "movie_name": "스파이더맨-브랜드 뉴 데이",
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
           "error": "",
-          "status": "WAIT"
+          "status": "OPEN"
+        },
+        {
+          "date": "2026-08-15",
+          "movie_found": true,
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
+          "error": "",
+          "status": "OPEN"
+        },
+        {
+          "date": "2026-08-16",
+          "movie_found": true,
+          "imax_open": true,
+          "imax_count": 6,
+          "movie_name": "오디세이",
+          "error": "",
+          "status": "OPEN"
         }
       ]
     }
