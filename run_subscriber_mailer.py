@@ -1,4 +1,4 @@
-from src.cgv_imax_watcher.subscriber_mailer import main
+from src.cgv_imax_watcher.subscriber_mailer_v2 import main
 
 
 if __name__ == "__main__":
