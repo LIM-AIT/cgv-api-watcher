@@ -102,6 +102,19 @@ function setAlertStatus(message, type = "info") {
   status.dataset.type = type;
 }
 
+function showSavedState(saved) {
+  if (!saved?.id || !saved?.token) return;
+
+  if (saved.verified) {
+    setAlertStatus("✅ 이메일 알림 등록 완료", "success");
+  } else {
+    setAlertStatus(
+      "등록 요청이 있습니다. 확인 메일의 링크를 눌러 등록을 완료해주세요.",
+      "pending",
+    );
+  }
+}
+
 function buildAlertPanel() {
   if (document.getElementById("imax-email-alert")) return;
 
@@ -152,15 +165,46 @@ function buildAlertPanel() {
     document.querySelector("main.app")?.prepend(section);
   }
 
+  showSavedState(readSavedSubscription());
+}
+
+async function syncSavedSubscriptionStatus() {
   const saved = readSavedSubscription();
-  if (saved?.id && saved?.token) {
-    setAlertStatus(
-      saved.verified
-        ? "이 브라우저에서 이메일 알림이 등록되어 있습니다."
-        : "등록 요청이 있습니다. 확인 메일의 링크를 눌러 등록을 완료해주세요.",
-      saved.verified ? "success" : "pending",
-    );
+  if (!saved?.id || !saved?.token) return;
+
+  const { data, error } = await supabase.rpc(
+    "get_cgv_email_subscription_status",
+    { p_id: saved.id, p_token: saved.token },
+  );
+
+  if (error) {
+    console.warn("Email subscription status sync failed", error);
+    return;
   }
+
+  if (data === "verified") {
+    if (!saved.verified) {
+      saveSubscription({ ...saved, verified: true });
+    }
+    setAlertStatus("✅ 이메일 알림 등록 완료", "success");
+    return;
+  }
+
+  if (data === "pending") {
+    setAlertStatus(
+      "등록 요청이 있습니다. 확인 메일의 링크를 눌러 등록을 완료해주세요.",
+      "pending",
+    );
+    return;
+  }
+
+  if (data === "inactive") {
+    clearSavedSubscription(saved.id);
+    setAlertStatus("이메일 알림이 해지되었습니다.", "info");
+    return;
+  }
+
+  clearSavedSubscription(saved.id);
 }
 
 async function registerAlert(event) {
@@ -209,7 +253,7 @@ async function registerAlert(event) {
     input.value = "";
     consent.checked = false;
     setAlertStatus(
-      "등록 요청 완료 · 확인 메일은 최대 약 3분 내 도착합니다. 메일의 확인 링크를 눌러주세요.",
+      "등록 요청 완료 · 확인 메일은 보통 1분 이내 도착합니다. 메일의 확인 링크를 눌러주세요.",
       "success",
     );
   } catch (error) {
@@ -247,6 +291,14 @@ function removeActionParams() {
   history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
+async function getSubscriptionStatus(id, token) {
+  const { data, error } = await supabase.rpc(
+    "get_cgv_email_subscription_status",
+    { p_id: id, p_token: token },
+  );
+  return error ? null : data;
+}
+
 async function handleEmailActions() {
   const params = new URLSearchParams(location.search);
   const verify = parseActionValue(params.get("email_verify"));
@@ -259,15 +311,20 @@ async function handleEmailActions() {
       { p_id: verify.id, p_token: verify.token },
     );
 
-    if (!error && data === true) {
+    const alreadyVerified =
+      !error && data !== true
+        ? (await getSubscriptionStatus(verify.id, verify.token)) === "verified"
+        : false;
+
+    if (!error && (data === true || alreadyVerified)) {
       const saved = readSavedSubscription();
-      if (saved?.id === verify.id) {
-        saveSubscription({ ...saved, verified: true });
-      }
-      setAlertStatus(
-        "이메일 알림 등록이 완료되었습니다. IMAX 오픈 시 메일로 알려드릴게요.",
-        "success",
-      );
+      saveSubscription({
+        ...(saved?.id === verify.id ? saved : {}),
+        id: verify.id,
+        token: verify.token,
+        verified: true,
+      });
+      setAlertStatus("✅ 이메일 알림 등록 완료", "success");
     } else {
       setAlertStatus(
         "확인 링크가 유효하지 않거나 이미 처리된 요청입니다.",
@@ -311,14 +368,32 @@ async function handleEmailActions() {
   }
 }
 
-function init() {
+async function init() {
   buildAlertPanel();
   document
     .getElementById("imax-email-alert-form")
     ?.addEventListener("submit", registerAlert);
-  handleEmailActions().catch((error) => {
+
+  try {
+    await handleEmailActions();
+    await syncSavedSubscriptionStatus();
+  } catch (error) {
     console.error("Email alert action failed", error);
     setAlertStatus("이메일 알림 요청을 처리하지 못했습니다.", "error");
+  }
+
+  window.addEventListener("focus", () => {
+    syncSavedSubscriptionStatus().catch((error) =>
+      console.warn("Email subscription focus sync failed", error),
+    );
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      syncSavedSubscriptionStatus().catch((error) =>
+        console.warn("Email subscription visibility sync failed", error),
+      );
+    }
   });
 }
 
