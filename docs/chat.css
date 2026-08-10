@@ -372,3 +372,14 @@
     font-size: 10px;
   }
 }
+
+
+/* mobile input zoom guard v1 */
+@media (max-width: 640px) {
+  .imax-chat-name,
+  .imax-chat-message {
+    font-size: 16px !important;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+}
