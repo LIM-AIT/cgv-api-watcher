@@ -13,11 +13,50 @@ permissions:
   contents: write
 
 concurrency:
-  group: cgv-watcher
+  group: cgv-watcher-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
+  update-header:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Update dashboard movie header
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+          for old in ("CGV IMAX Spider-Man", "CGV IMAX 오디세이"):
+              text = text.replace(old, "CGV IMAX The Odyssey")
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/index.html
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Switch dashboard header to The Odyssey [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          else
+            echo "Dashboard header is already up to date."
+          fi
+
   watch:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 350
 
@@ -42,7 +81,8 @@ jobs:
 
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
-          text = text.replace("CGV IMAX Spider-Man", "CGV IMAX 오디세이")
+          for old in ("CGV IMAX Spider-Man", "CGV IMAX 오디세이"):
+              text = text.replace(old, "CGV IMAX The Odyssey")
           path.write_text(text, encoding="utf-8")
           PY
 
@@ -53,7 +93,7 @@ jobs:
           git add docs/index.html
 
           if ! git diff --cached --quiet; then
-            git commit -m "Switch dashboard header to Odyssey [skip ci]"
+            git commit -m "Switch dashboard header to The Odyssey [skip ci]"
             git push origin HEAD:main || {
               git pull --rebase origin main
               git push origin HEAD:main
