@@ -1,0 +1,47 @@
+name: Refresh Chat Assets V3
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/bump-chat-v3.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  bump-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bump chat asset cache version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+          text = re.sub(r'\./chat\.css\?v=\d+', './chat.css?v=3', text)
+          text = re.sub(r'\./chat\.js\?v=\d+', './chat.js?v=3', text)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh chat assets v3 [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          else
+            echo "Chat asset version is already v3."
+          fi
