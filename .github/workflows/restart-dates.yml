@@ -1,0 +1,33 @@
+name: Restart CGV Watcher Dates
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/restart-dates.yml"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cgv-watcher-workflow_dispatch
+  cancel-in-progress: true
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch main watcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Restarting CGV watcher with the latest workflow configuration."
+          curl --fail-with-body \
+            --request POST \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/watch.yml/dispatches" \
+            --data '{"ref":"main"}'
