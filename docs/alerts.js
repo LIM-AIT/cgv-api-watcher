@@ -225,11 +225,19 @@ async function registerAlert(event) {
 }
 
 function parseActionValue(value) {
-  const dotIndex = String(value || "").indexOf(".");
+  const normalized = String(value || "").trim();
+  const dotIndex = normalized.indexOf(".");
   if (dotIndex <= 0) return null;
-  const id = value.slice(0, dotIndex);
-  const token = value.slice(dotIndex + 1);
+  const id = normalized.slice(0, dotIndex);
+  const token = normalized.slice(dotIndex + 1);
   return id && token ? { id, token } : null;
+}
+
+function parseActionValues(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => parseActionValue(item))
+    .filter(Boolean);
 }
 
 function removeActionParams() {
@@ -242,7 +250,7 @@ function removeActionParams() {
 async function handleEmailActions() {
   const params = new URLSearchParams(location.search);
   const verify = parseActionValue(params.get("email_verify"));
-  const unsubscribe = parseActionValue(params.get("email_unsubscribe"));
+  const unsubscribes = parseActionValues(params.get("email_unsubscribe"));
 
   if (verify) {
     setAlertStatus("이메일 알림 등록을 확인하고 있습니다.", "pending");
@@ -270,15 +278,28 @@ async function handleEmailActions() {
     return;
   }
 
-  if (unsubscribe) {
+  if (unsubscribes.length) {
     setAlertStatus("이메일 알림을 해지하고 있습니다.", "pending");
-    const { data, error } = await supabase.rpc(
-      "unsubscribe_cgv_email_subscription",
-      { p_id: unsubscribe.id, p_token: unsubscribe.token },
+
+    const results = await Promise.all(
+      unsubscribes.map(({ id, token }) =>
+        supabase.rpc("unsubscribe_cgv_email_subscription", {
+          p_id: id,
+          p_token: token,
+        }),
+      ),
     );
 
-    if (!error && data === true) {
-      clearSavedSubscription(unsubscribe.id);
+    const succeededIds = unsubscribes
+      .filter((_, index) => {
+        const result = results[index];
+        return !result.error && result.data === true;
+      })
+      .map(({ id }) => id);
+
+    succeededIds.forEach((id) => clearSavedSubscription(id));
+
+    if (succeededIds.length) {
       setAlertStatus("이메일 알림이 해지되었습니다.", "success");
     } else {
       setAlertStatus(
