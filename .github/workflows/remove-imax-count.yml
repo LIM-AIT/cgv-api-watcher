@@ -1,0 +1,54 @@
+name: Remove IMAX Count
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/remove-imax-count.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Remove IMAX count badges
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+
+          text = text.replace(
+              '      const count = Number(result.imax_count || 0);\n',
+              '',
+              1,
+          )
+          text = text.replace(
+              '          <div class="result-actions">\n            <div class="imax-count">${count}</div>\n            ${bookingAction}\n          </div>',
+              '          <div class="result-actions">\n            ${bookingAction}\n          </div>',
+              1,
+          )
+
+          if '<div class="imax-count">${count}</div>' in text:
+              raise SystemExit("IMAX count markup still remains")
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove IMAX count badges [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
