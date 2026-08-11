@@ -1,0 +1,31 @@
+name: Refresh Date More Toggle Asset
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bump-layout-order-v4.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Bump layout order asset version
+        run: |
+          python -c 'from pathlib import Path; p=Path("docs/index.html"); s=p.read_text(encoding="utf-8"); old="./layout-order.js?v=3"; new="./layout-order.js?v=4"; assert old in s or new in s; p.write_text(s.replace(old,new,1),encoding="utf-8")'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh date more toggle asset [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
