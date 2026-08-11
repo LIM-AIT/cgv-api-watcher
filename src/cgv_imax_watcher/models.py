@@ -26,4 +26,5 @@ class WatchResult:
     imax_count: int
     movie_name: str
     api_url: str
+    booking_url: str = ""
     error: str = ""
