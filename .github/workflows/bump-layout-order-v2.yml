@@ -1,0 +1,44 @@
+name: Refresh Layout Order V2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/bump-layout-order-v2.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bump layout order asset version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('docs/index.html')
+          text = path.read_text(encoding='utf-8')
+          old = './layout-order.js?v=1'
+          new = './layout-order.js?v=2'
+          if old not in text and new not in text:
+              raise SystemExit('layout-order reference not found')
+          text = text.replace(old, new)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Refresh corrected layout order [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
