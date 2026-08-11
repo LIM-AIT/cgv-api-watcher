@@ -1,0 +1,31 @@
+name: Attach Alert Subscriber Count Asset
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/add-alert-count-asset.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Add subscriber count script
+        run: |
+          python -c 'from pathlib import Path; p=Path("docs/index.html"); s=p.read_text(encoding="utf-8"); marker="  <script type=\"module\" src=\"./alerts.js?v=3\"></script>"; addition=marker+"\n  <script type=\"module\" src=\"./alert-count.js?v=1\"></script>"; assert marker in s or "./alert-count.js?v=1" in s; p.write_text(s if "./alert-count.js?v=1" in s else s.replace(marker,addition,1),encoding="utf-8")'
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Show verified email subscriber count [skip ci]"
+            git push origin HEAD:main
+          fi
