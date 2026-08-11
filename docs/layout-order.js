@@ -1,4 +1,6 @@
 (() => {
+  const RETRY_DELAYS = [0, 100, 300, 700, 1500, 3000, 6000];
+
   function placeInteractiveSections() {
     const main = document.querySelector("main.app");
     const footer = main?.querySelector("footer.footer");
@@ -9,19 +11,36 @@
       return false;
     }
 
-    // Final order: live chat first, reaction-speed test directly below it.
+    // Desired final order: live chat first, reaction-speed test immediately below it.
+    if (
+      liveChat.parentElement === main &&
+      reactionGame.parentElement === main &&
+      liveChat.nextElementSibling === reactionGame
+    ) {
+      return true;
+    }
+
     main.insertBefore(liveChat, footer);
     main.insertBefore(reactionGame, footer);
-
     return true;
   }
 
-  if (placeInteractiveSections()) return;
+  let observer = null;
+  let stopTimer = null;
 
-  const observer = new MutationObserver(() => {
-    if (placeInteractiveSections()) {
-      observer.disconnect();
-    }
+  function verifyOrder() {
+    const placed = placeInteractiveSections();
+    if (!placed) return;
+
+    if (stopTimer) window.clearTimeout(stopTimer);
+    stopTimer = window.setTimeout(() => {
+      placeInteractiveSections();
+      observer?.disconnect();
+    }, 2500);
+  }
+
+  observer = new MutationObserver(() => {
+    verifyOrder();
   });
 
   observer.observe(document.documentElement, {
@@ -29,8 +48,9 @@
     subtree: true,
   });
 
-  window.setTimeout(() => {
-    placeInteractiveSections();
-    observer.disconnect();
-  }, 5000);
+  RETRY_DELAYS.forEach((delay) => {
+    window.setTimeout(verifyOrder, delay);
+  });
+
+  window.addEventListener("load", verifyOrder, { once: true });
 })();
