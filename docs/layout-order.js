@@ -9,10 +9,9 @@
       return false;
     }
 
-    // Keep both interactive sections in the normal page flow and swap
-    // their previous visual order: reaction test first, live chat second.
-    main.insertBefore(reactionGame, footer);
+    // Final order: live chat first, reaction-speed test directly below it.
     main.insertBefore(liveChat, footer);
+    main.insertBefore(reactionGame, footer);
 
     return true;
   }
