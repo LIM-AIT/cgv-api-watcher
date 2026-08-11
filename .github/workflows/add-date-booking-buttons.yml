@@ -21,153 +21,95 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          from textwrap import dedent, indent
 
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
 
-          old_render = '''    function renderResult(result) {
-      const status = result.status || "NO_SCHEDULE";
-      const statusClass = STATUS_CLASSES[status] || "status-idle";
-      const statusLabel = STATUS_LABELS[status] || status;
-      const count = Number(result.imax_count || 0);
+          if 'function buildDateBookingUrl(data, theater, result)' not in text:
+              start = text.index("    function renderResult(result) {")
+              end = text.index("\n    function renderTheaters(data) {", start)
+              new_render = indent(dedent("""\
+          function buildDateBookingUrl(data, theater, result) {
+            if (result?.booking_url) return result.booking_url;
 
-      const movieName = result.movie_name
-        ? `<div class="movie-name">${escapeHtml(result.movie_name)}</div>`
-        : "";
+            const movieNo = data?.movie_keyword === "오디세이" ? "30001323" : "";
+            if (!movieNo || !theater?.site_no || !result?.date) {
+              return theater?.booking_url || "#";
+            }
 
-      const errorMessage = result.error
-        ? `<div class="error-message">${escapeHtml(result.error)}</div>`
-        : "";
-
-      return `
-        <div class="result-row">
-          <div class="result-date">${escapeHtml(formatDate(result.date))}</div>
-
-          <div class="result-main">
-            <div class="status-line ${statusClass}">
-              <span class="status-dot"></span>
-              <span class="status-label">${escapeHtml(statusLabel)}</span>
-            </div>
-            ${movieName}
-            ${errorMessage}
-          </div>
-
-          <div class="imax-count">${count}</div>
-        </div>
-      `;
-    }
-'''
-
-          new_render = '''    function buildDateBookingUrl(data, theater, result) {
-      if (result?.booking_url) return result.booking_url;
-
-      const movieNo = data?.movie_keyword === "오디세이" ? "30001323" : "";
-      if (!movieNo || !theater?.site_no || !result?.date) {
-        return theater?.booking_url || "#";
-      }
-
-      const bookingParams = new URLSearchParams({
-        movNo: movieNo,
-        scnYmd: String(result.date).replaceAll("-", ""),
-        siteNm: `CGV ${theater.name}`,
-        siteNo: String(theater.site_no),
-      });
-
-      return `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
-    }
-
-    function renderResult(result, theater, data) {
-      const status = result.status || "NO_SCHEDULE";
-      const statusClass = STATUS_CLASSES[status] || "status-idle";
-      const statusLabel = STATUS_LABELS[status] || status;
-      const count = Number(result.imax_count || 0);
-      const isOpen = result.imax_open || status === "OPEN";
-
-      const movieName = result.movie_name
-        ? `<div class="movie-name">${escapeHtml(result.movie_name)}</div>`
-        : "";
-
-      const errorMessage = result.error
-        ? `<div class="error-message">${escapeHtml(result.error)}</div>`
-        : "";
-
-      const bookingAction = isOpen
-        ? `
-          <a
-            class="result-booking-link"
-            href="${escapeHtml(buildDateBookingUrl(data, theater, result))}"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="${escapeHtml(formatDate(result.date))} 오디세이 IMAX 예매"
-          >예매 ↗</a>
-        `
-        : "";
-
-      return `
-        <div class="result-row">
-          <div class="result-date">${escapeHtml(formatDate(result.date))}</div>
-
-          <div class="result-main">
-            <div class="status-line ${statusClass}">
-              <span class="status-dot"></span>
-              <span class="status-label">${escapeHtml(statusLabel)}</span>
-            </div>
-            ${movieName}
-            ${errorMessage}
-          </div>
-
-          <div class="result-actions">
-            <div class="imax-count">${count}</div>
-            ${bookingAction}
-          </div>
-        </div>
-      `;
-    }
-'''
-
-          if old_render in text:
-              text = text.replace(old_render, new_render, 1)
-          elif 'function buildDateBookingUrl(data, theater, result)' not in text:
-              raise SystemExit("renderResult block not found")
-
-          old_open_block = '''        const results = Array.isArray(theater.results) ? theater.results : [];
-        const openResult = results.find(
-          (result) => result?.imax_open || result?.status === "OPEN",
-        );
-
-        let bookingUrl = openResult?.booking_url || theater.booking_url;
-        let bookingLabel = "CGV 예매 페이지 열기";
-
-        if (openResult) {
-          const movieNo = data.movie_keyword === "오디세이" ? "30001323" : "";
-
-          if (!openResult.booking_url && movieNo && theater.site_no && openResult.date) {
             const bookingParams = new URLSearchParams({
               movNo: movieNo,
-              scnYmd: String(openResult.date).replaceAll("-", ""),
+              scnYmd: String(result.date).replaceAll("-", ""),
               siteNm: `CGV ${theater.name}`,
               siteNo: String(theater.site_no),
             });
 
-            bookingUrl = `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
+            return `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
           }
 
-          bookingLabel = "오디세이 IMAX 예매 바로가기";
-        }
+          function renderResult(result, theater, data) {
+            const status = result.status || "NO_SCHEDULE";
+            const statusClass = STATUS_CLASSES[status] || "status-idle";
+            const statusLabel = STATUS_LABELS[status] || status;
+            const count = Number(result.imax_count || 0);
+            const isOpen = result.imax_open || status === "OPEN";
 
-        const rows = results.length
-          ? results.map(renderResult).join("")
-'''
-          new_open_block = '''        const results = Array.isArray(theater.results) ? theater.results : [];
-        const rows = results.length
-          ? results.map((result) => renderResult(result, theater, data)).join("")
-'''
+            const movieName = result.movie_name
+              ? `<div class="movie-name">${escapeHtml(result.movie_name)}</div>`
+              : "";
 
-          if old_open_block in text:
-              text = text.replace(old_open_block, new_open_block, 1)
-          elif 'renderResult(result, theater, data)' not in text:
-              raise SystemExit("renderTheaters mapping block not found")
+            const errorMessage = result.error
+              ? `<div class="error-message">${escapeHtml(result.error)}</div>`
+              : "";
 
+            const bookingAction = isOpen
+              ? `
+                <a
+                  class="result-booking-link"
+                  href="${escapeHtml(buildDateBookingUrl(data, theater, result))}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="${escapeHtml(formatDate(result.date))} 오디세이 IMAX 예매"
+                >예매 ↗</a>
+              `
+              : "";
+
+            return `
+              <div class="result-row">
+                <div class="result-date">${escapeHtml(formatDate(result.date))}</div>
+
+                <div class="result-main">
+                  <div class="status-line ${statusClass}">
+                    <span class="status-dot"></span>
+                    <span class="status-label">${escapeHtml(statusLabel)}</span>
+                  </div>
+                  ${movieName}
+                  ${errorMessage}
+                </div>
+
+                <div class="result-actions">
+                  <div class="imax-count">${count}</div>
+                  ${bookingAction}
+                </div>
+              </div>
+            `;
+          }
+          """), "    ")
+              text = text[:start] + new_render.rstrip() + text[end:]
+
+          theater_start = text.index("        const results = Array.isArray(theater.results) ? theater.results : [];")
+          rows_start = text.index("        const rows = results.length", theater_start)
+          current_prefix = text[theater_start:rows_start]
+          desired_prefix = "        const results = Array.isArray(theater.results) ? theater.results : [];\n"
+          if current_prefix != desired_prefix:
+              text = text[:theater_start] + desired_prefix + text[rows_start:]
+
+          text = text.replace(
+              '? results.map(renderResult).join("")',
+              '? results.map((result) => renderResult(result, theater, data)).join("")',
+              1,
+          )
           text = text.replace(
               '                href="${escapeHtml(bookingUrl)}"',
               '                href="${escapeHtml(theater.booking_url)}"',
@@ -179,64 +121,62 @@ jobs:
               1,
           )
 
-          style_marker = '  <link rel="stylesheet" href="./chat.css?v=6">'
-          style_block = '''  <style id="date-booking-buttons-v1">
-    .result-actions {
-      display: flex;
-      align-items: center;
-      justify-self: end;
-      gap: 7px;
-      white-space: nowrap;
-    }
-
-    .result-booking-link {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 30px;
-      padding: 5px 9px;
-      border: 1px solid rgba(63, 185, 80, 0.42);
-      border-radius: 999px;
-      background: rgba(63, 185, 80, 0.1);
-      color: #7ee787;
-      font-size: 11px;
-      font-weight: 900;
-      line-height: 1;
-      text-decoration: none;
-      transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
-    }
-
-    .result-booking-link:hover {
-      border-color: rgba(63, 185, 80, 0.7);
-      background: rgba(63, 185, 80, 0.18);
-      transform: translateY(-1px);
-    }
-
-    @media (max-width: 520px) {
-      .result-actions {
-        grid-column: 2;
-        justify-self: start;
-        margin-top: -2px;
-      }
-
-      .result-actions .imax-count {
-        grid-column: auto;
-        margin-top: 0;
-      }
-    }
-
-    @media (max-width: 360px) {
-      .result-actions {
-        grid-column: auto;
-      }
-    }
-  </style>
-'''
-
           if 'id="date-booking-buttons-v1"' not in text:
-              if style_marker not in text:
-                  raise SystemExit("stylesheet marker not found")
-              text = text.replace(style_marker, style_block + style_marker, 1)
+              marker = '  <link rel="stylesheet" href="./chat.css?v=6">'
+              style = indent(dedent("""\
+          <style id="date-booking-buttons-v1">
+            .result-actions {
+              display: flex;
+              align-items: center;
+              justify-self: end;
+              gap: 7px;
+              white-space: nowrap;
+            }
+
+            .result-booking-link {
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              min-height: 30px;
+              padding: 5px 9px;
+              border: 1px solid rgba(63, 185, 80, 0.42);
+              border-radius: 999px;
+              background: rgba(63, 185, 80, 0.1);
+              color: #7ee787;
+              font-size: 11px;
+              font-weight: 900;
+              line-height: 1;
+              text-decoration: none;
+              transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+            }
+
+            .result-booking-link:hover {
+              border-color: rgba(63, 185, 80, 0.7);
+              background: rgba(63, 185, 80, 0.18);
+              transform: translateY(-1px);
+            }
+
+            @media (max-width: 520px) {
+              .result-actions {
+                grid-column: 2;
+                justify-self: start;
+                margin-top: -2px;
+              }
+
+              .result-actions .imax-count {
+                grid-column: auto;
+                margin-top: 0;
+              }
+            }
+
+            @media (max-width: 360px) {
+              .result-actions {
+                grid-column: auto;
+              }
+            }
+          </style>
+          """), "  ")
+              text = text.replace(marker, style + marker, 1)
 
           path.write_text(text, encoding="utf-8")
           PY
