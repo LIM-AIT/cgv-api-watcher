@@ -1,0 +1,32 @@
+name: Shift Mobile Status Left
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/shift-mobile-status-left.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Shift mobile status labels left
+        run: |
+          python -c 'from pathlib import Path; p=Path("docs/index.html"); s=p.read_text(encoding="utf-8"); s=s.replace("grid-template-columns: 62px minmax(0, 1fr) auto !important;", "grid-template-columns: 56px minmax(0, 1fr) auto !important;", 1); s=s.replace("gap: 7px !important;", "gap: 4px !important;", 1); p.write_text(s, encoding="utf-8")'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Shift mobile status labels left [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
