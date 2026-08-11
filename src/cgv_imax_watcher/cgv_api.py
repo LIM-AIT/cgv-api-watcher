@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlencode
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -10,6 +11,7 @@ from .config import Config
 from .models import Theater, WatchResult
 
 API_BASE_URL = "https://cgv.co.kr/api/v1/booking/searchMovScnInfo"
+BOOKING_BASE_URL = "https://cgv.co.kr/cnm/movieBook/movie"
 COMPANY_CODE = "A420"
 IMAX_GRADE_CODE = "03"
 
@@ -66,6 +68,28 @@ def is_imax(item: dict[str, Any]) -> bool:
     )
 
 
+def build_booking_url(
+    item: dict[str, Any],
+    theater: Theater,
+    target_date,
+) -> str:
+    """Build CGV's current movie-booking deep link from a screening row."""
+    mov_no = str(item.get("movNo") or "").strip()
+    if not mov_no:
+        return ""
+
+    params = {
+        "movNo": mov_no,
+        "scnSseq": str(item.get("scnSseq") or "").strip(),
+        "scnYmd": str(item.get("scnYmd") or target_date.strftime("%Y%m%d")).strip(),
+        "scnsNo": str(item.get("scnsNo") or "").strip(),
+        "siteNm": str(item.get("siteNm") or theater.name).strip(),
+        "siteNo": str(item.get("siteNo") or theater.site_no).strip(),
+    }
+    query = urlencode({key: value for key, value in params.items() if value})
+    return f"{BOOKING_BASE_URL}?{query}"
+
+
 def fetch_schedule(
     session: requests.Session,
     cfg: Config,
@@ -113,8 +137,10 @@ def fetch_schedule(
     imax_items = [item for item in movie_items if is_imax(item)]
 
     movie_name = ""
+    booking_url = ""
     if imax_items:
         movie_name = str(imax_items[0].get("movNm") or "")
+        booking_url = build_booking_url(imax_items[0], theater, target_date)
     elif movie_items:
         movie_name = str(movie_items[0].get("movNm") or "")
 
@@ -126,4 +152,5 @@ def fetch_schedule(
         imax_count=len(imax_items),
         movie_name=movie_name,
         api_url=response.url,
+        booking_url=booking_url,
     )
