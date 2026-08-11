@@ -1,0 +1,243 @@
+name: Extend Dates More Toggle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/extend-dates-more-toggle.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extend dates and add more toggle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          watch = Path('.github/workflows/watch.yml')
+          watch_text = watch.read_text(encoding='utf-8')
+          old_date = '          DATE_TO: "2026-09-02"'
+          new_date = '          DATE_TO: "2026-09-07"'
+          if old_date in watch_text:
+              watch_text = watch_text.replace(old_date, new_date, 1)
+          elif new_date not in watch_text:
+              raise SystemExit('DATE_TO marker not found')
+          watch.write_text(watch_text, encoding='utf-8')
+
+          path = Path('docs/index.html')
+          text = path.read_text(encoding='utf-8')
+
+          if 'const DEFAULT_VISIBLE_TO = "2026-09-02";' not in text:
+              marker = '    const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;\n'
+              if marker not in text:
+                  raise SystemExit('JS constant marker not found')
+              text = text.replace(
+                  marker,
+                  marker + '    const DEFAULT_VISIBLE_TO = "2026-09-02";\n',
+                  1,
+              )
+
+          old_rows = '''        const results = Array.isArray(theater.results) ? theater.results : [];
+        const rows = results.length
+          ? results.map((result) => renderResult(result, theater, data)).join("")
+          : `
+            <div class="result-row">
+              <div class="result-main">
+                <div class="status-line status-idle">
+                  <span class="status-dot"></span>
+                  <span class="status-label">표시할 결과가 없습니다.</span>
+                </div>
+              </div>
+            </div>
+          `;
+'''
+
+          new_rows = '''        const results = Array.isArray(theater.results) ? theater.results : [];
+        const visibleResults = results.filter(
+          (result) => !result?.date || result.date <= DEFAULT_VISIBLE_TO
+        );
+        const extraResults = results.filter(
+          (result) => result?.date && result.date > DEFAULT_VISIBLE_TO
+        );
+
+        const rows = visibleResults.length
+          ? visibleResults.map((result) => renderResult(result, theater, data)).join("")
+          : `
+            <div class="result-row">
+              <div class="result-main">
+                <div class="status-line status-idle">
+                  <span class="status-dot"></span>
+                  <span class="status-label">표시할 결과가 없습니다.</span>
+                </div>
+              </div>
+            </div>
+          `;
+
+        const extraRows = extraResults
+          .map((result) => renderResult(result, theater, data))
+          .join("");
+        const extraHasOpen = extraResults.some(
+          (result) => result?.imax_open || result?.status === "OPEN"
+        );
+        const extraDateFrom = extraResults[0]?.date || "";
+        const extraDateTo = extraResults[extraResults.length - 1]?.date || "";
+        const extraSection = extraResults.length
+          ? `
+            <div class="result-extra" hidden>${extraRows}</div>
+            <button
+              class="result-more-button${extraHasOpen ? " has-open" : ""}"
+              type="button"
+              aria-expanded="false"
+            >
+              <span class="result-more-label">더보기</span>
+              <span class="result-more-range">
+                ${escapeHtml(formatDate(extraDateFrom))} ~ ${escapeHtml(formatDate(extraDateTo))}
+              </span>
+              <span class="result-more-arrow">⌄</span>
+            </button>
+          `
+          : "";
+'''
+
+          if old_rows in text:
+              text = text.replace(old_rows, new_rows, 1)
+          elif 'const extraSection = extraResults.length' not in text:
+              raise SystemExit('render rows block not found')
+
+          old_list = '            <div class="result-list">${rows}</div>\n'
+          new_list = '            <div class="result-list">${rows}${extraSection}</div>\n'
+          if old_list in text:
+              text = text.replace(old_list, new_list, 1)
+          elif new_list not in text:
+              raise SystemExit('result-list marker not found')
+
+          end_marker = '''      }).join("");
+    }
+
+    function updateServiceStatus(data) {'''
+          bind_code = '''      }).join("");
+
+      content.querySelectorAll(".result-more-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          const card = button.closest(".theater-card");
+          const extra = card?.querySelector(".result-extra");
+          if (!extra) return;
+
+          const expanded = button.getAttribute("aria-expanded") === "true";
+          button.setAttribute("aria-expanded", String(!expanded));
+
+          if (expanded) {
+            extra.setAttribute("hidden", "");
+          } else {
+            extra.removeAttribute("hidden");
+          }
+
+          const label = button.querySelector(".result-more-label");
+          const arrow = button.querySelector(".result-more-arrow");
+          if (label) label.textContent = expanded ? "더보기" : "접기";
+          if (arrow) arrow.textContent = expanded ? "⌄" : "⌃";
+        });
+      });
+    }
+
+    function updateServiceStatus(data) {'''
+          if end_marker in text:
+              text = text.replace(end_marker, bind_code, 1)
+          elif 'content.querySelectorAll(".result-more-button")' not in text:
+              raise SystemExit('renderTheaters end marker not found')
+
+          if 'id="result-more-toggle-v1"' not in text:
+              css_marker = '  <link rel="stylesheet" href="./chat.css?v=6">\n'
+              css = '''  <style id="result-more-toggle-v1">
+    .result-extra[hidden] {
+      display: none !important;
+    }
+
+    .result-more-button {
+      display: flex;
+      width: calc(100% - 20px);
+      min-height: 34px;
+      margin: 7px 10px 9px;
+      padding: 7px 10px;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--muted);
+      cursor: pointer;
+      font: inherit;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .result-more-button:hover {
+      border-color: rgba(148, 163, 184, 0.36);
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+    }
+
+    .result-more-button.has-open {
+      border-color: rgba(63, 185, 80, 0.34);
+      color: #7ee787;
+    }
+
+    .result-more-range {
+      font-size: 10px;
+      font-weight: 700;
+      opacity: 0.78;
+    }
+
+    .result-more-arrow {
+      font-size: 12px;
+      line-height: 1;
+    }
+
+    @media (max-width: 640px) {
+      .result-more-button {
+        width: calc(100% - 12px);
+        min-height: 28px;
+        margin: 5px 6px 6px;
+        padding: 5px 6px;
+        gap: 4px;
+        border-radius: 8px;
+        font-size: 9px;
+      }
+
+      .result-more-range {
+        font-size: 8px;
+        letter-spacing: -0.03em;
+      }
+
+      .result-more-arrow {
+        font-size: 10px;
+      }
+    }
+  </style>
+'''
+              if css_marker not in text:
+                  raise SystemExit('CSS insert marker not found')
+              text = text.replace(css_marker, css + css_marker, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/watch.yml docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Extend Odyssey watch through Sep 7 with more toggle [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
