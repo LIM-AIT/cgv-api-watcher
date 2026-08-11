@@ -2,6 +2,19 @@
   const RETRY_DELAYS = [0, 100, 300, 700, 1500, 3000, 6000];
   const DEFAULT_VISIBLE_MMDD = 902;
   const DATE_MORE_STYLE_ID = "date-more-toggle-style-v1";
+  const REACTION_LEADERBOARD_ASSET_ID = "reaction-leaderboard-asset-v1";
+
+  function ensureReactionLeaderboardAsset() {
+    if (document.getElementById(REACTION_LEADERBOARD_ASSET_ID)) return;
+
+    const script = document.createElement("script");
+    script.id = REACTION_LEADERBOARD_ASSET_ID;
+    script.type = "module";
+    script.src = "./reaction-leaderboard.js?v=1";
+    document.head.appendChild(script);
+  }
+
+  ensureReactionLeaderboardAsset();
 
   function placeInteractiveSections() {
     const main = document.querySelector("main.app");
