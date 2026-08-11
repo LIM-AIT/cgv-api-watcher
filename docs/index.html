@@ -2738,21 +2738,32 @@ function escapeHtml(value) {
       updateRefreshButton(true);
 
       try {
-        const response = await fetch(
-          `https://api.github.com/repos/LIM-AIT/cgv-api-watcher/contents/docs/status.json?ref=main&timestamp=${Date.now()}`,
-          {
-            cache: "no-store",
-            headers: {
-              Accept: "application/vnd.github.raw+json",
-            },
-          },
-        );
+        const statusUrls = [
+          `./status.json?timestamp=${Date.now()}`,
+          `${RAW_STATUS_URL}?timestamp=${Date.now()}`,
+        ];
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        let data = null;
+        let lastError = null;
+
+        for (const url of statusUrls) {
+          try {
+            const response = await fetch(url, { cache: "no-store" });
+            if (!response.ok) {
+              lastError = new Error(`HTTP ${response.status}`);
+              continue;
+            }
+
+            data = await response.json();
+            break;
+          } catch (error) {
+            lastError = error;
+          }
         }
 
-        const data = await response.json();
+        if (!data) {
+          throw lastError || new Error("상태 데이터 요청 실패");
+        }
 
         renderSummary(data);
         renderTheaters(data);
