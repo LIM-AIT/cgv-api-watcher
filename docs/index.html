@@ -2147,15 +2147,37 @@
     }
 
     @media (max-width: 520px) {
-      .result-actions {
-        grid-column: 2;
-        justify-self: start;
-        margin-top: -2px;
+      .result-row {
+        grid-template-columns: 62px minmax(0, 1fr) auto !important;
+        gap: 7px !important;
       }
 
-      .result-actions .imax-count {
-        grid-column: auto;
-        margin-top: 0;
+      .result-main {
+        min-width: 0;
+      }
+
+      .status-line {
+        gap: 6px;
+      }
+
+      .status-label {
+        font-size: 13px;
+      }
+
+      .result-actions {
+        grid-column: 3 !important;
+        justify-self: end !important;
+        align-self: center;
+        margin-top: 0 !important;
+        gap: 0;
+      }
+
+      .result-booking-link {
+        min-height: 24px;
+        padding: 3px 7px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 1;
       }
     }
 
