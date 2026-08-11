@@ -1,11 +1,11 @@
 {
   "service": "CGV API Watcher",
   "status": "OPEN",
-  "checked_at": "2026-08-11T20:14:59+09:00",
-  "checked_at_display": "2026-08-11 20:14:59 KST",
+  "checked_at": "2026-08-11T20:15:22+09:00",
+  "checked_at_display": "2026-08-11 20:15:22 KST",
   "movie_keyword": "오디세이",
   "date_from": "2026-08-25",
-  "date_to": "2026-09-02",
+  "date_to": "2026-09-07",
   "theaters": [
     {
       "name": "용산아이파크몰",
@@ -94,6 +94,56 @@
         },
         {
           "date": "2026-09-02",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-03",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-04",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-05",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-06",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-07",
           "movie_found": false,
           "imax_open": false,
           "imax_count": 0,
@@ -191,6 +241,56 @@
         },
         {
           "date": "2026-09-02",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-03",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-04",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-05",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-06",
+          "movie_found": false,
+          "imax_open": false,
+          "imax_count": 0,
+          "movie_name": "",
+          "booking_url": "",
+          "error": "",
+          "status": "NO_SCHEDULE"
+        },
+        {
+          "date": "2026-09-07",
           "movie_found": false,
           "imax_open": false,
           "imax_count": 0,
