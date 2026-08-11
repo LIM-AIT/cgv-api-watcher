@@ -1,0 +1,96 @@
+name: Compact Mobile Booking Button
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/compact-mobile-booking-button.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Keep mobile booking action on one row
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''    @media (max-width: 520px) {
+      .result-actions {
+        grid-column: 2;
+        justify-self: start;
+        margin-top: -2px;
+      }
+
+      .result-actions .imax-count {
+        grid-column: auto;
+        margin-top: 0;
+      }
+    }
+'''
+
+          new = '''    @media (max-width: 520px) {
+      .result-row {
+        grid-template-columns: 62px minmax(0, 1fr) auto !important;
+        gap: 7px !important;
+      }
+
+      .result-main {
+        min-width: 0;
+      }
+
+      .status-line {
+        gap: 6px;
+      }
+
+      .status-label {
+        font-size: 13px;
+      }
+
+      .result-actions {
+        grid-column: 3 !important;
+        justify-self: end !important;
+        align-self: center;
+        margin-top: 0 !important;
+        gap: 0;
+      }
+
+      .result-booking-link {
+        min-height: 24px;
+        padding: 3px 7px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 1;
+      }
+    }
+'''
+
+          if old not in text:
+              if 'grid-template-columns: 62px minmax(0, 1fr) auto !important;' not in text:
+                  raise SystemExit("mobile booking CSS block not found")
+          else:
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Compact mobile booking action [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
