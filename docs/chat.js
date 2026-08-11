@@ -7,6 +7,9 @@ const MAX_MESSAGES = 50;
 const SEND_COOLDOWN_MS = 2000;
 const FALLBACK_SYNC_MS = 60000;
 const PRESENCE_CHANNEL = "cgv-imax-live-chat";
+const ADMIN_CONFIG_RPC = "is_cgv_chat_admin_configured";
+const ADMIN_VERIFY_RPC = "verify_cgv_chat_admin";
+const ADMIN_DELETE_RPC = "delete_cgv_chat_message";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const clientId = globalThis.crypto?.randomUUID?.() || `client-${Date.now()}-${Math.random()}`;
@@ -15,6 +18,9 @@ const messageStore = new Map();
 let realtimeChannel = null;
 let presenceNickname = "";
 let syncPromise = null;
+let isAdminMode = false;
+let adminPassword = "";
+let adminBusy = false;
 
 function formatTime(value) {
   const date = new Date(value);
@@ -53,7 +59,15 @@ function buildChat() {
         <h2>💬 IMAX 실시간 채팅</h2>
         <p>예매 오픈 정보와 현황을 실시간으로 공유하세요.</p>
       </div>
-      <span id="imax-chat-status" class="imax-chat-status">연결 중</span>
+      <div class="imax-chat-head-actions">
+        <span id="imax-chat-status" class="imax-chat-status">연결 중</span>
+        <button
+          id="imax-chat-admin-button"
+          class="imax-chat-admin-button"
+          type="button"
+          title="관리자 모드"
+        >관리자</button>
+      </div>
     </div>
 
     <div class="imax-chat-body">
@@ -137,6 +151,19 @@ function createMessageNode(row) {
 
   meta.append(name, time);
 
+  if (isAdminMode) {
+    const deleteButton = document.createElement("button");
+    deleteButton.className = "imax-chat-delete";
+    deleteButton.type = "button";
+    deleteButton.textContent = "삭제";
+    deleteButton.title = "이 메시지 삭제";
+    deleteButton.setAttribute("aria-label", `${String(row.nickname ?? "익명")} 메시지 삭제`);
+    deleteButton.addEventListener("click", () => {
+      void deleteChatMessage(row, deleteButton);
+    });
+    meta.appendChild(deleteButton);
+  }
+
   const message = document.createElement("div");
   message.className = "imax-chat-text";
   message.textContent = String(row.message ?? "");
@@ -196,6 +223,34 @@ function mergeMessages(rows, forceBottom = false) {
   renderMessages(forceBottom);
 }
 
+function reconcileMessages(rows, forceBottom = false) {
+  const fetched = Array.isArray(rows) ? rows : [];
+  const fetchedIds = new Set(
+    fetched
+      .filter((row) => row?.id !== undefined && row?.id !== null)
+      .map((row) => String(row.id)),
+  );
+
+  const newestFetchedAt = fetched.length
+    ? Math.max(...fetched.map((row) => Date.parse(row.created_at) || 0))
+    : Number.POSITIVE_INFINITY;
+
+  for (const [id, row] of messageStore.entries()) {
+    const rowTime = Date.parse(row?.created_at) || 0;
+    if (!fetchedIds.has(id) && rowTime <= newestFetchedAt) {
+      messageStore.delete(id);
+    }
+  }
+
+  mergeMessages(fetched, forceBottom);
+}
+
+function removeMessage(messageId) {
+  if (messageId === undefined || messageId === null) return;
+  const deleted = messageStore.delete(String(messageId));
+  if (deleted) renderMessages(false);
+}
+
 async function loadMessages(forceBottom = false) {
   if (syncPromise) return syncPromise;
 
@@ -217,7 +272,7 @@ async function loadMessages(forceBottom = false) {
       return;
     }
 
-    mergeMessages(data || [], forceBottom);
+    reconcileMessages(data || [], forceBottom);
   })();
 
   try {
@@ -319,6 +374,11 @@ function subscribeRealtime() {
       { event: "INSERT", schema: "public", table: TABLE },
       (payload) => mergeMessages([payload.new], true),
     )
+    .on(
+      "postgres_changes",
+      { event: "DELETE", schema: "public", table: TABLE },
+      (payload) => removeMessage(payload.old?.id),
+    )
     .on("presence", { event: "sync" }, () => {
       renderPresence(realtimeChannel.presenceState());
     })
@@ -335,7 +395,6 @@ function subscribeRealtime() {
         const savedName = getSavedNickname();
         if (savedName) void updatePresence(savedName);
 
-        // 연결/재연결 직후 DB와 다시 맞춰 Realtime 누락 구간을 복구한다.
         void loadMessages(false);
       } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT") {
         setConnectionStatus("연결 재시도 중", false);
@@ -343,6 +402,126 @@ function subscribeRealtime() {
         setConnectionStatus("연결 끊김", false);
       }
     });
+}
+
+function updateAdminUi() {
+  const section = document.getElementById("imax-live-chat");
+  const button = document.getElementById("imax-chat-admin-button");
+
+  section?.classList.toggle("admin-active", isAdminMode);
+  if (button) {
+    button.classList.toggle("active", isAdminMode);
+    button.textContent = isAdminMode ? "관리자 종료" : "관리자";
+    button.disabled = adminBusy;
+  }
+
+  renderMessages(false);
+}
+
+function exitAdminMode() {
+  adminPassword = "";
+  isAdminMode = false;
+  adminBusy = false;
+  updateAdminUi();
+}
+
+async function enterAdminMode() {
+  if (adminBusy) return;
+  adminBusy = true;
+  updateAdminUi();
+
+  try {
+    const { data: configured, error: configError } = await supabase.rpc(ADMIN_CONFIG_RPC);
+
+    if (configError) {
+      console.error("Admin config check failed", configError);
+      alert("관리자 설정 상태를 확인하지 못했습니다.");
+      return;
+    }
+
+    if (configured !== true) {
+      alert("관리자 비밀번호가 아직 설정되지 않았습니다.");
+      return;
+    }
+
+    const password = window.prompt("채팅 관리자 비밀번호를 입력하세요.");
+    if (!password) return;
+
+    const { data: verified, error } = await supabase.rpc(ADMIN_VERIFY_RPC, {
+      p_admin_password: password,
+    });
+
+    if (error) {
+      console.error("Admin verification failed", error);
+      alert("관리자 인증 중 오류가 발생했습니다.");
+      return;
+    }
+
+    if (verified !== true) {
+      alert("관리자 비밀번호가 올바르지 않습니다.");
+      return;
+    }
+
+    adminPassword = password;
+    isAdminMode = true;
+  } finally {
+    adminBusy = false;
+    updateAdminUi();
+  }
+}
+
+async function deleteChatMessage(row, button) {
+  if (!isAdminMode || !adminPassword || adminBusy) return;
+
+  const nickname = String(row.nickname ?? "익명");
+  const preview = String(row.message ?? "").slice(0, 80);
+  const confirmed = window.confirm(
+    `[${nickname}] ${preview}${String(row.message ?? "").length > 80 ? "…" : ""}\n\n이 채팅 기록을 삭제할까요?`,
+  );
+
+  if (!confirmed) return;
+
+  adminBusy = true;
+  if (button) {
+    button.disabled = true;
+    button.textContent = "삭제 중";
+  }
+
+  try {
+    const { data: deleted, error } = await supabase.rpc(ADMIN_DELETE_RPC, {
+      p_message_id: row.id,
+      p_admin_password: adminPassword,
+    });
+
+    if (error) {
+      console.error("Admin delete failed", error);
+      alert("채팅 삭제에 실패했습니다.");
+      return;
+    }
+
+    if (deleted !== true) {
+      alert("이미 삭제된 메시지이거나 관리자 권한을 다시 확인해야 합니다.");
+      return;
+    }
+
+    removeMessage(row.id);
+    void loadMessages(false);
+  } finally {
+    adminBusy = false;
+    updateAdminUi();
+  }
+}
+
+function bindAdminControls() {
+  const button = document.getElementById("imax-chat-admin-button");
+  button?.addEventListener("click", () => {
+    if (isAdminMode) {
+      exitAdminMode();
+      return;
+    }
+
+    void enterAdminMode();
+  });
 }
 
 function bindPresenceControls() {
@@ -381,7 +560,6 @@ function bindForm() {
     localStorage.setItem("cgv-chat-nickname", nickname);
     presenceNickname = nickname;
 
-    // Presence 응답을 기다리지 않고 메시지 전송부터 진행한다.
     void updatePresence(nickname);
 
     const { data, error } = await supabase
@@ -395,7 +573,6 @@ function bindForm() {
       alert("메시지 전송에 실패했습니다. 잠시 후 다시 시도해주세요.");
       nextAllowedAt = 0;
     } else {
-      // Realtime 이벤트를 기다리지 않고 DB 저장 결과를 즉시 화면에 반영한다.
       mergeMessages([data], true);
       if (messageInput) {
         messageInput.value = "";
@@ -426,6 +603,7 @@ function bindConnectionRecovery() {
   });
 
   window.addEventListener("pagehide", () => {
+    adminPassword = "";
     void untrackPresence();
   });
 
@@ -446,10 +624,10 @@ function bindConnectionRecovery() {
 async function initChat() {
   buildChat();
   bindForm();
+  bindAdminControls();
   bindPresenceControls();
   bindConnectionRecovery();
 
-  // Realtime 구독을 먼저 시작하고, 초기 DB 조회 및 재구독 시 다시 동기화한다.
   subscribeRealtime();
   await loadMessages(true);
 }
