@@ -2101,6 +2101,18 @@
       }
     }
 
+  
+    /* booking open badge pulse v1 */
+    .health-badge.booking-open .health-dot.opening-pulse {
+      background: var(--open) !important;
+      box-shadow: 0 0 15px var(--open) !important;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .health-badge.booking-open #service-status {
+      color: #7ee787;
+    }
+
   </style>
   <link rel="stylesheet" href="./chat.css?v=4">
   <link rel="stylesheet" href="./alerts.css?v=1">
@@ -2377,6 +2389,9 @@ function escapeHtml(value) {
 
       if (!label || !dot) return;
 
+      dot.classList.remove("opening-pulse");
+      badge?.classList.remove("booking-open");
+
       if (badge) {
         badge.style.borderColor = "rgba(63, 185, 80, 0.34)";
         badge.style.background = "rgba(63, 185, 80, 0.08)";
@@ -2385,6 +2400,8 @@ function escapeHtml(value) {
       if (data.status === "OPEN") {
         label.textContent = "예매 오픈 감지";
         dot.style.background = "var(--open)";
+        dot.classList.add("opening-pulse");
+        badge?.classList.add("booking-open");
         return;
       }
 
