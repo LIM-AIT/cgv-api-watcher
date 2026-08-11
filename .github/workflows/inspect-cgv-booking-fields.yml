@@ -16,26 +16,30 @@ jobs:
       - name: Inspect Odyssey IMAX fields
         run: |
           python - <<'PY'
-          import json
-          import urllib.parse
-          import urllib.request
+          import requests
 
-          params = urllib.parse.urlencode({
-              "coCd": "A420",
-              "siteNo": "0013",
-              "scnYmd": "20260825",
-              "rtctlScopCd": "08",
-          })
-          req = urllib.request.Request(
-              "https://cgv.co.kr/api/v1/booking/searchMovScnInfo?" + params,
+          response = requests.get(
+              "https://cgv.co.kr/api/v1/booking/searchMovScnInfo",
+              params={
+                  "coCd": "A420",
+                  "siteNo": "0013",
+                  "scnYmd": "20260825",
+                  "rtctlScopCd": "08",
+              },
               headers={
                   "Accept": "application/json, text/plain, */*",
-                  "User-Agent": "Mozilla/5.0",
+                  "User-Agent": (
+                      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/139.0.0.0 Safari/537.36"
+                  ),
                   "Referer": "https://cgv.co.kr/cnm/movieBook/cinema",
               },
+              timeout=20,
           )
-          with urllib.request.urlopen(req, timeout=20) as res:
-              payload = json.load(res)
+          print("status", response.status_code)
+          response.raise_for_status()
+          payload = response.json()
           rows = [
               x for x in (payload.get("data") or [])
               if "오디세이" in str(x.get("movNm") or "")
