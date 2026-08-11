@@ -2115,7 +2115,7 @@
 
       <div class="health-badge">
         <span id="service-dot" class="health-dot"></span>
-        <span id="service-status">불러오는 중</span>
+        <span id="service-status">연결 확인 중</span>
       </div>
     </header>
 
@@ -2373,15 +2373,28 @@ function escapeHtml(value) {
     function updateServiceStatus(data) {
       const label = document.getElementById("service-status");
       const dot = document.getElementById("service-dot");
+      const badge = label?.parentElement;
+
+      if (!label || !dot) return;
+
+      if (badge) {
+        badge.style.borderColor = "rgba(63, 185, 80, 0.34)";
+        badge.style.background = "rgba(63, 185, 80, 0.08)";
+      }
 
       if (data.status === "OPEN") {
-        label.textContent = "불러오는 중";
+        label.textContent = "예매 오픈 감지";
+        dot.style.background = "var(--open)";
         return;
       }
 
       if (data.status === "DEGRADED") {
         label.textContent = "일부 조회 오류";
         dot.style.background = "var(--error)";
+        if (badge) {
+          badge.style.borderColor = "rgba(248, 81, 73, 0.34)";
+          badge.style.background = "rgba(248, 81, 73, 0.08)";
+        }
         return;
       }
 
