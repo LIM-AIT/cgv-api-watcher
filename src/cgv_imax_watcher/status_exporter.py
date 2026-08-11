@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
@@ -30,7 +30,11 @@ def export_status(
             {
                 "name": theater.name,
                 "site_no": theater.site_no,
-                "booking_url": theater.booking_url,
+                "booking_url": _theater_booking_url(
+                    theater.site_no,
+                    theater.booking_url,
+                    results,
+                ),
                 "results": [
                     {
                         "date": result.target_date.isoformat(),
@@ -38,6 +42,7 @@ def export_status(
                         "imax_open": result.imax_open,
                         "imax_count": result.imax_count,
                         "movie_name": result.movie_name,
+                        "booking_url": result.booking_url,
                         "error": result.error,
                         "status": _result_status(result),
                     }
@@ -53,6 +58,22 @@ def export_status(
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
+
+
+def _theater_booking_url(
+    site_no: str,
+    fallback_url: str,
+    results: list[WatchResult],
+) -> str:
+    """Use the earliest currently-open IMAX screening as the theater button target."""
+    for result in results:
+        if (
+            result.theater.site_no == site_no
+            and result.imax_open
+            and result.booking_url
+        ):
+            return result.booking_url
+    return fallback_url
 
 
 def _result_status(result: WatchResult) -> str:
