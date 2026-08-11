@@ -1,0 +1,105 @@
+name: Refine Header Status Badge
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/refine-header-status-badge.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Refine status badge behavior
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/index.html')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              '<span id="service-status">불러오는 중</span>',
+              '<span id="service-status">연결 확인 중</span>',
+              1,
+          )
+
+          old = '''    function updateServiceStatus(data) {
+      const label = document.getElementById("service-status");
+      const dot = document.getElementById("service-dot");
+
+      if (data.status === "OPEN") {
+        label.textContent = "불러오는 중";
+        return;
+      }
+
+      if (data.status === "DEGRADED") {
+        label.textContent = "일부 조회 오류";
+        dot.style.background = "var(--error)";
+        return;
+      }
+
+      label.textContent = "정상 감시 중";
+      dot.style.background = "var(--open)";
+    }
+'''
+
+          new = '''    function updateServiceStatus(data) {
+      const label = document.getElementById("service-status");
+      const dot = document.getElementById("service-dot");
+      const badge = label?.parentElement;
+
+      if (!label || !dot) return;
+
+      if (badge) {
+        badge.style.borderColor = "rgba(63, 185, 80, 0.34)";
+        badge.style.background = "rgba(63, 185, 80, 0.08)";
+      }
+
+      if (data.status === "OPEN") {
+        label.textContent = "예매 오픈 감지";
+        dot.style.background = "var(--open)";
+        return;
+      }
+
+      if (data.status === "DEGRADED") {
+        label.textContent = "일부 조회 오류";
+        dot.style.background = "var(--error)";
+        if (badge) {
+          badge.style.borderColor = "rgba(248, 81, 73, 0.34)";
+          badge.style.background = "rgba(248, 81, 73, 0.08)";
+        }
+        return;
+      }
+
+      label.textContent = "정상 감시 중";
+      dot.style.background = "var(--open)";
+    }
+'''
+
+          if old not in text:
+              raise SystemExit('updateServiceStatus block not found')
+
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Refine header monitoring status badge [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
