@@ -27,6 +27,12 @@
     return true;
   }
 
+  function removeGenericBookingButtons() {
+    document
+      .querySelectorAll(".theater-card .booking-wrap")
+      .forEach((node) => node.remove());
+  }
+
   function ensureDateMoreStyles() {
     if (document.getElementById(DATE_MORE_STYLE_ID)) return;
 
@@ -189,6 +195,11 @@
   let stopTimer = null;
   let contentObserver = null;
 
+  function refreshTheaterUi() {
+    removeGenericBookingButtons();
+    applyDateMoreToggles();
+  }
+
   function attachContentObserver() {
     const content = document.getElementById("content");
     if (!content || content.dataset.dateMoreObserved === "true") return;
@@ -196,26 +207,26 @@
     content.dataset.dateMoreObserved = "true";
     contentObserver?.disconnect();
     contentObserver = new MutationObserver(() => {
-      window.requestAnimationFrame(applyDateMoreToggles);
+      window.requestAnimationFrame(refreshTheaterUi);
     });
     contentObserver.observe(content, {
       childList: true,
       subtree: true,
     });
-    applyDateMoreToggles();
+    refreshTheaterUi();
   }
 
   function verifyOrder() {
     const placed = placeInteractiveSections();
     attachContentObserver();
-    applyDateMoreToggles();
+    refreshTheaterUi();
     if (!placed) return;
 
     if (stopTimer) window.clearTimeout(stopTimer);
     stopTimer = window.setTimeout(() => {
       placeInteractiveSections();
       attachContentObserver();
-      applyDateMoreToggles();
+      refreshTheaterUi();
       observer?.disconnect();
     }, 2500);
   }
