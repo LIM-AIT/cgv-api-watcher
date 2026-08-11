@@ -31,6 +31,7 @@ DEFAULT_STATUS_URL = (
 )
 DEFAULT_DASHBOARD_URL = "https://lim-ait.github.io/cgv-api-watcher/"
 IMAX_GRADE_CODE = "03"
+ODYSSEY_MOVIE_NO = "30001323"
 WEEKDAYS = ("월", "화", "수", "목", "금", "토", "일")
 
 
@@ -320,6 +321,21 @@ def format_date_label(value: str) -> str:
         return value
 
 
+def event_booking_url(event: OpenEvent) -> str:
+    if not event.site_no or not event.target_date:
+        return event.booking_url
+
+    params = urlencode(
+        {
+            "movNo": ODYSSEY_MOVIE_NO,
+            "scnYmd": event.target_date.replace("-", ""),
+            "siteNm": f"CGV {event.theater_name}",
+            "siteNo": event.site_no,
+        }
+    )
+    return f"https://cgv.co.kr/cnm/movieBook/movie?{params}"
+
+
 def action_url(param: str, subscriptions: list[Subscription]) -> str:
     dashboard = env("DASHBOARD_URL", DEFAULT_DASHBOARD_URL).rstrip("/") + "/"
     values = ",".join(f"{sub.id}.{sub.token}" for sub in subscriptions)
@@ -351,6 +367,7 @@ def alert_message(
     subscriptions: list[Subscription],
 ) -> EmailMessage:
     date_label = format_date_label(event.target_date)
+    booking_url = event_booking_url(event)
     message = EmailMessage()
     message["From"] = sender
     message["To"] = recipient
@@ -364,8 +381,8 @@ def alert_message(
         f"영화: {event.movie_name}\n\n"
         "메일 알림 등록 이후 '영화 일정 없음 → 예매 오픈'으로 "
         "변경된 것이 확인되어 발송된 알림입니다.\n\n"
-        "CGV 예매 페이지:\n"
-        f"{event.booking_url}\n\n"
+        "오디세이 IMAX 바로 예매하기:\n"
+        f"{booking_url}\n\n"
         "자동 예매가 아닌 오픈 감지 알림입니다.\n"
         "링크를 열어 날짜와 회차를 직접 확인하고 예매하세요.\n\n"
         "메일 알림 해지:\n"
