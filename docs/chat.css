@@ -29,6 +29,13 @@
   line-height: 1.4;
 }
 
+.imax-chat-head-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
 .imax-chat-status {
   flex: 0 0 auto;
   padding: 6px 8px;
@@ -43,6 +50,40 @@
 .imax-chat-status.connected {
   color: var(--open);
   border-color: rgba(63, 185, 80, 0.38);
+}
+
+.imax-chat-admin-button {
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.imax-chat-admin-button:hover {
+  border-color: rgba(248, 81, 73, 0.38);
+  color: #ffb4ad;
+}
+
+.imax-chat-admin-button.active {
+  border-color: rgba(248, 81, 73, 0.48);
+  background: rgba(248, 81, 73, 0.1);
+  color: #ffb4ad;
+}
+
+.imax-chat-admin-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.imax-live-chat.admin-active {
+  border-color: rgba(248, 81, 73, 0.28);
 }
 
 .imax-chat-body {
@@ -104,6 +145,30 @@
 .imax-chat-meta span {
   color: var(--muted);
   font-size: 9px;
+}
+
+.imax-chat-delete {
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 7px;
+  background: rgba(248, 81, 73, 0.07);
+  color: #ffb4ad;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.imax-chat-delete:hover {
+  border-color: rgba(248, 81, 73, 0.58);
+  background: rgba(248, 81, 73, 0.14);
+}
+
+.imax-chat-delete:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .imax-chat-text {
@@ -294,6 +359,20 @@
     display: none;
   }
 
+  .imax-chat-head-actions {
+    gap: 4px;
+  }
+
+  .imax-chat-status,
+  .imax-chat-admin-button {
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+
+  .imax-chat-admin-button {
+    min-height: 26px;
+  }
+
   .imax-chat-body {
     grid-template-columns: minmax(0, 1fr);
     gap: 7px;
@@ -348,6 +427,11 @@
     padding: 7px;
   }
 
+  .imax-chat-delete {
+    padding: 2px 5px;
+    font-size: 8px;
+  }
+
   .imax-chat-form {
     grid-template-columns: 82px minmax(0, 1fr) 54px;
     gap: 5px;
@@ -372,7 +456,6 @@
     font-size: 10px;
   }
 }
-
 
 /* mobile input zoom guard v1 */
 @media (max-width: 640px) {
