@@ -1,0 +1,59 @@
+name: Inspect CGV Booking Fields
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/inspect-cgv-booking-fields.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect Odyssey IMAX fields
+        run: |
+          python - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+
+          params = urllib.parse.urlencode({
+              "coCd": "A420",
+              "siteNo": "0013",
+              "scnYmd": "20260825",
+              "rtctlScopCd": "08",
+          })
+          req = urllib.request.Request(
+              "https://cgv.co.kr/api/v1/booking/searchMovScnInfo?" + params,
+              headers={
+                  "Accept": "application/json, text/plain, */*",
+                  "User-Agent": "Mozilla/5.0",
+                  "Referer": "https://cgv.co.kr/cnm/movieBook/cinema",
+              },
+          )
+          with urllib.request.urlopen(req, timeout=20) as res:
+              payload = json.load(res)
+          rows = [
+              x for x in (payload.get("data") or [])
+              if "오디세이" in str(x.get("movNm") or "")
+              and (
+                  str(x.get("tcscnsGradCd") or "").strip() == "03"
+                  or "imax" in str(x.get("tcscnsGradNm") or "").lower()
+                  or "imax" in str(x.get("scnsNm") or "").lower()
+              )
+          ]
+          print("matches", len(rows))
+          if rows:
+              row = rows[0]
+              print("keys", sorted(row.keys()))
+              wanted = [
+                  "movNo", "movNm", "scnSseq", "scnYmd", "scnsNo",
+                  "scnsNm", "siteNo", "siteNm", "scnStartTm", "scnEndTm",
+                  "playStartTm", "playEndTm", "expoProdNm", "tcscnsGradCd",
+                  "tcscnsGradNm",
+              ]
+              print("selected", {k: row.get(k) for k in wanted if k in row})
+          PY
