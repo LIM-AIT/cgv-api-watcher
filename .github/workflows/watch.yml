@@ -131,7 +131,7 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           THEATERS: ${{ secrets.THEATERS }}
           DATE_FROM: "2026-08-25"
-          DATE_TO: "2026-09-02"
+          DATE_TO: "2026-09-07"
           MOVIE_KEYWORD: "오디세이"
           INTERVAL_SECONDS: "150"
           REQUEST_TIMEOUT_SECONDS: "20"
