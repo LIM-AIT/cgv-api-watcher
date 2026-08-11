@@ -1,0 +1,32 @@
+name: Attach Global Reaction Leaderboard
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/attach-reaction-leaderboard.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Attach global reaction leaderboard
+        run: python .github/scripts/attach_reaction_leaderboard.py
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/layout-order.js docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Enable global reaction TOP 5 [skip ci]"
+            git push origin HEAD:main
+          fi
