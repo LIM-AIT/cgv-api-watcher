@@ -383,3 +383,9 @@
     -webkit-text-size-adjust: 100%;
   }
 }
+
+/* live monitor status/meta spacing v1 */
+#live-panel,
+.live-panel {
+  column-gap: 12px !important;
+}
