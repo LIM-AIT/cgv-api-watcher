@@ -1,0 +1,53 @@
+name: Remove Generic Booking Button
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/remove-generic-booking-button.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Remove generic theater booking button
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/index.html")
+          text = path.read_text(encoding="utf-8")
+
+          old = '''
+            <div class="booking-wrap">
+              <a
+                class="booking-link"
+                href="${escapeHtml(theater.booking_url)}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                CGV 전체 예매 페이지
+              </a>
+            </div>
+'''
+
+          if old not in text:
+              raise SystemExit("Generic booking button block not found")
+
+          text = text.replace(old, "", 1)
+          path.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          git commit -m "Remove redundant generic booking button [skip ci]"
+          git push origin HEAD:main
