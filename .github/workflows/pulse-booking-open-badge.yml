@@ -1,0 +1,92 @@
+name: Pulse Booking Open Badge
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pulse-booking-open-badge.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Add booking-open pulse effect
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('docs/index.html')
+          text = path.read_text(encoding='utf-8')
+
+          old_guard = '''      if (!label || !dot) return;
+
+      if (badge) {
+'''
+          new_guard = '''      if (!label || !dot) return;
+
+      dot.classList.remove("opening-pulse");
+      badge?.classList.remove("booking-open");
+
+      if (badge) {
+'''
+          if old_guard not in text:
+              raise SystemExit('status guard block not found')
+          text = text.replace(old_guard, new_guard, 1)
+
+          old_open = '''      if (data.status === "OPEN") {
+        label.textContent = "예매 오픈 감지";
+        dot.style.background = "var(--open)";
+        return;
+      }
+'''
+          new_open = '''      if (data.status === "OPEN") {
+        label.textContent = "예매 오픈 감지";
+        dot.style.background = "var(--open)";
+        dot.classList.add("opening-pulse");
+        badge?.classList.add("booking-open");
+        return;
+      }
+'''
+          if old_open not in text:
+              raise SystemExit('OPEN status block not found')
+          text = text.replace(old_open, new_open, 1)
+
+          marker = '/* booking open badge pulse v1 */'
+          if marker not in text:
+              css = '''
+    /* booking open badge pulse v1 */
+    .health-badge.booking-open .health-dot.opening-pulse {
+      background: var(--open) !important;
+      box-shadow: 0 0 15px var(--open) !important;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .health-badge.booking-open #service-status {
+      color: #7ee787;
+    }
+'''
+              if '</style>' not in text:
+                  raise SystemExit('style closing tag not found')
+              text = text.replace('</style>', css + '\n  </style>', 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Pulse booking open status badge [skip ci]"
+            git push origin HEAD:main || {
+              git pull --rebase origin main
+              git push origin HEAD:main
+            }
+          fi
