@@ -2114,6 +2114,57 @@
     }
 
   </style>
+  <style id="date-booking-buttons-v1">
+    .result-actions {
+      display: flex;
+      align-items: center;
+      justify-self: end;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .result-booking-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 5px 9px;
+      border: 1px solid rgba(63, 185, 80, 0.42);
+      border-radius: 999px;
+      background: rgba(63, 185, 80, 0.1);
+      color: #7ee787;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      text-decoration: none;
+      transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+    }
+
+    .result-booking-link:hover {
+      border-color: rgba(63, 185, 80, 0.7);
+      background: rgba(63, 185, 80, 0.18);
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 520px) {
+      .result-actions {
+        grid-column: 2;
+        justify-self: start;
+        margin-top: -2px;
+      }
+
+      .result-actions .imax-count {
+        grid-column: auto;
+        margin-top: 0;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .result-actions {
+        grid-column: auto;
+      }
+    }
+  </style>
   <link rel="stylesheet" href="./chat.css?v=6">
   <link rel="stylesheet" href="./alerts.css?v=1">
 </head>
@@ -2298,11 +2349,30 @@ function escapeHtml(value) {
       `;
     }
 
-    function renderResult(result) {
+    function buildDateBookingUrl(data, theater, result) {
+      if (result?.booking_url) return result.booking_url;
+
+      const movieNo = data?.movie_keyword === "오디세이" ? "30001323" : "";
+      if (!movieNo || !theater?.site_no || !result?.date) {
+        return theater?.booking_url || "#";
+      }
+
+      const bookingParams = new URLSearchParams({
+        movNo: movieNo,
+        scnYmd: String(result.date).replaceAll("-", ""),
+        siteNm: `CGV ${theater.name}`,
+        siteNo: String(theater.site_no),
+      });
+
+      return `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
+    }
+
+    function renderResult(result, theater, data) {
       const status = result.status || "NO_SCHEDULE";
       const statusClass = STATUS_CLASSES[status] || "status-idle";
       const statusLabel = STATUS_LABELS[status] || status;
       const count = Number(result.imax_count || 0);
+      const isOpen = result.imax_open || status === "OPEN";
 
       const movieName = result.movie_name
         ? `<div class="movie-name">${escapeHtml(result.movie_name)}</div>`
@@ -2310,6 +2380,18 @@ function escapeHtml(value) {
 
       const errorMessage = result.error
         ? `<div class="error-message">${escapeHtml(result.error)}</div>`
+        : "";
+
+      const bookingAction = isOpen
+        ? `
+          <a
+            class="result-booking-link"
+            href="${escapeHtml(buildDateBookingUrl(data, theater, result))}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="${escapeHtml(formatDate(result.date))} 오디세이 IMAX 예매"
+          >예매 ↗</a>
+        `
         : "";
 
       return `
@@ -2325,11 +2407,13 @@ function escapeHtml(value) {
             ${errorMessage}
           </div>
 
-          <div class="imax-count">${count}</div>
+          <div class="result-actions">
+            <div class="imax-count">${count}</div>
+            ${bookingAction}
+          </div>
         </div>
       `;
     }
-
     function renderTheaters(data) {
       const content = document.getElementById("content");
       const theaters = Array.isArray(data.theaters) ? data.theaters : [];
@@ -2343,32 +2427,8 @@ function escapeHtml(value) {
       content.className = "theater-list";
       content.innerHTML = theaters.map((theater) => {
         const results = Array.isArray(theater.results) ? theater.results : [];
-        const openResult = results.find(
-          (result) => result?.imax_open || result?.status === "OPEN",
-        );
-
-        let bookingUrl = openResult?.booking_url || theater.booking_url;
-        let bookingLabel = "CGV 예매 페이지 열기";
-
-        if (openResult) {
-          const movieNo = data.movie_keyword === "오디세이" ? "30001323" : "";
-
-          if (!openResult.booking_url && movieNo && theater.site_no && openResult.date) {
-            const bookingParams = new URLSearchParams({
-              movNo: movieNo,
-              scnYmd: String(openResult.date).replaceAll("-", ""),
-              siteNm: `CGV ${theater.name}`,
-              siteNo: String(theater.site_no),
-            });
-
-            bookingUrl = `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
-          }
-
-          bookingLabel = "오디세이 IMAX 예매 바로가기";
-        }
-
         const rows = results.length
-          ? results.map(renderResult).join("")
+          ? results.map((result) => renderResult(result, theater, data)).join("")
           : `
             <div class="result-row">
               <div class="result-main">
@@ -2394,11 +2454,11 @@ function escapeHtml(value) {
             <div class="booking-wrap">
               <a
                 class="booking-link"
-                href="${escapeHtml(bookingUrl)}"
+                href="${escapeHtml(theater.booking_url)}"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                ${escapeHtml(bookingLabel)}
+                CGV 전체 예매 페이지
               </a>
             </div>
           </article>
