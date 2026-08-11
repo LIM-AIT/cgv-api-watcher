@@ -25,61 +25,56 @@ jobs:
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
 
-          old = '''    @media (max-width: 520px) {
-      .result-actions {
-        grid-column: 2;
-        justify-self: start;
-        margin-top: -2px;
-      }
+          old = (
+              "    @media (max-width: 520px) {\n"
+              "      .result-actions {\n"
+              "        grid-column: 2;\n"
+              "        justify-self: start;\n"
+              "        margin-top: -2px;\n"
+              "      }\n\n"
+              "      .result-actions .imax-count {\n"
+              "        grid-column: auto;\n"
+              "        margin-top: 0;\n"
+              "      }\n"
+              "    }\n"
+          )
 
-      .result-actions .imax-count {
-        grid-column: auto;
-        margin-top: 0;
-      }
-    }
-'''
+          new = (
+              "    @media (max-width: 520px) {\n"
+              "      .result-row {\n"
+              "        grid-template-columns: 62px minmax(0, 1fr) auto !important;\n"
+              "        gap: 7px !important;\n"
+              "      }\n\n"
+              "      .result-main {\n"
+              "        min-width: 0;\n"
+              "      }\n\n"
+              "      .status-line {\n"
+              "        gap: 6px;\n"
+              "      }\n\n"
+              "      .status-label {\n"
+              "        font-size: 13px;\n"
+              "      }\n\n"
+              "      .result-actions {\n"
+              "        grid-column: 3 !important;\n"
+              "        justify-self: end !important;\n"
+              "        align-self: center;\n"
+              "        margin-top: 0 !important;\n"
+              "        gap: 0;\n"
+              "      }\n\n"
+              "      .result-booking-link {\n"
+              "        min-height: 24px;\n"
+              "        padding: 3px 7px;\n"
+              "        border-radius: 8px;\n"
+              "        font-size: 10px;\n"
+              "        line-height: 1;\n"
+              "      }\n"
+              "    }\n"
+          )
 
-          new = '''    @media (max-width: 520px) {
-      .result-row {
-        grid-template-columns: 62px minmax(0, 1fr) auto !important;
-        gap: 7px !important;
-      }
-
-      .result-main {
-        min-width: 0;
-      }
-
-      .status-line {
-        gap: 6px;
-      }
-
-      .status-label {
-        font-size: 13px;
-      }
-
-      .result-actions {
-        grid-column: 3 !important;
-        justify-self: end !important;
-        align-self: center;
-        margin-top: 0 !important;
-        gap: 0;
-      }
-
-      .result-booking-link {
-        min-height: 24px;
-        padding: 3px 7px;
-        border-radius: 8px;
-        font-size: 10px;
-        line-height: 1;
-      }
-    }
-'''
-
-          if old not in text:
-              if 'grid-template-columns: 62px minmax(0, 1fr) auto !important;' not in text:
-                  raise SystemExit("mobile booking CSS block not found")
-          else:
+          if old in text:
               text = text.replace(old, new, 1)
+          elif "grid-template-columns: 62px minmax(0, 1fr) auto !important;" not in text:
+              raise SystemExit("mobile booking CSS block not found")
 
           path.write_text(text, encoding="utf-8")
           PY
