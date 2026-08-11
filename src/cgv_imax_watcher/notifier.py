@@ -3,12 +3,15 @@ from __future__ import annotations
 import hashlib
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlencode
 
 from .cgv_api import IMAX_GRADE_CODE
 from .config import Config
 from .email_service import send_email
 from .models import WatchResult
 from .state import save_state
+
+ODYSSEY_MOVIE_NO = "30001323"
 
 
 def result_key(result: WatchResult) -> str:
@@ -31,6 +34,21 @@ def result_signature(cfg: Config, result: WatchResult) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def booking_url_for_result(result: WatchResult) -> str:
+    if not result.theater.site_no:
+        return result.theater.booking_url
+
+    params = urlencode(
+        {
+            "movNo": ODYSSEY_MOVIE_NO,
+            "scnYmd": result.target_date.strftime("%Y%m%d"),
+            "siteNm": f"CGV {result.theater.name}",
+            "siteNo": result.theater.site_no,
+        }
+    )
+    return f"https://cgv.co.kr/cnm/movieBook/movie?{params}"
+
+
 def notify_new(
     cfg: Config,
     results: list[WatchResult],
@@ -51,6 +69,7 @@ def notify_new(
             continue
 
         movie_name = result.movie_name or cfg.movie_keyword
+        booking_url = booking_url_for_result(result)
         body = f"""CGV IMAX 예매가 열렸습니다.
 
 극장: {result.theater.name}
@@ -59,11 +78,11 @@ def notify_new(
 
 CGV 상영 일정 API에서 해당 영화의 IMAX 데이터가 처음 확인되었습니다.
 
-극장 예매 페이지:
-{result.theater.booking_url}
+오디세이 IMAX 바로 예매하기:
+{booking_url}
 
 자동 예매가 아닌 오픈 감지 알림입니다.
-링크를 열어 날짜와 회차를 직접 확인하고 예매하세요.
+링크를 열어 해당 날짜의 회차를 확인하고 예매하세요.
 """
 
         send_email(
