@@ -2371,7 +2371,6 @@ function escapeHtml(value) {
       const status = result.status || "NO_SCHEDULE";
       const statusClass = STATUS_CLASSES[status] || "status-idle";
       const statusLabel = STATUS_LABELS[status] || status;
-      const count = Number(result.imax_count || 0);
       const isOpen = result.imax_open || status === "OPEN";
 
       const movieName = result.movie_name
@@ -2408,7 +2407,6 @@ function escapeHtml(value) {
           </div>
 
           <div class="result-actions">
-            <div class="imax-count">${count}</div>
             ${bookingAction}
           </div>
         </div>
