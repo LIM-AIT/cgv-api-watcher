@@ -22,61 +22,24 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           path = Path('docs/index.html')
           text = path.read_text(encoding='utf-8')
-
-          old_guard = '''      if (!label || !dot) return;
-
-      if (badge) {
-'''
-          new_guard = '''      if (!label || !dot) return;
-
-      dot.classList.remove("opening-pulse");
-      badge?.classList.remove("booking-open");
-
-      if (badge) {
-'''
-          if old_guard not in text:
+          old_guard = '      if (!label || !dot) return;\n\n      if (badge) {'
+          new_guard = '      if (!label || !dot) return;\n\n      dot.classList.remove("opening-pulse");\n      badge?.classList.remove("booking-open");\n\n      if (badge) {'
+          if old_guard in text:
+              text = text.replace(old_guard, new_guard, 1)
+          elif 'dot.classList.remove("opening-pulse")' not in text:
               raise SystemExit('status guard block not found')
-          text = text.replace(old_guard, new_guard, 1)
-
-          old_open = '''      if (data.status === "OPEN") {
-        label.textContent = "예매 오픈 감지";
-        dot.style.background = "var(--open)";
-        return;
-      }
-'''
-          new_open = '''      if (data.status === "OPEN") {
-        label.textContent = "예매 오픈 감지";
-        dot.style.background = "var(--open)";
-        dot.classList.add("opening-pulse");
-        badge?.classList.add("booking-open");
-        return;
-      }
-'''
-          if old_open not in text:
+          old_open = '      if (data.status === "OPEN") {\n        label.textContent = "예매 오픈 감지";\n        dot.style.background = "var(--open)";\n        return;\n      }'
+          new_open = '      if (data.status === "OPEN") {\n        label.textContent = "예매 오픈 감지";\n        dot.style.background = "var(--open)";\n        dot.classList.add("opening-pulse");\n        badge?.classList.add("booking-open");\n        return;\n      }'
+          if old_open in text:
+              text = text.replace(old_open, new_open, 1)
+          elif 'dot.classList.add("opening-pulse")' not in text:
               raise SystemExit('OPEN status block not found')
-          text = text.replace(old_open, new_open, 1)
-
           marker = '/* booking open badge pulse v1 */'
           if marker not in text:
-              css = '''
-    /* booking open badge pulse v1 */
-    .health-badge.booking-open .health-dot.opening-pulse {
-      background: var(--open) !important;
-      box-shadow: 0 0 15px var(--open) !important;
-      animation: pulse 1.8s ease-in-out infinite;
-    }
-
-    .health-badge.booking-open #service-status {
-      color: #7ee787;
-    }
-'''
-              if '</style>' not in text:
-                  raise SystemExit('style closing tag not found')
+              css = '\n    /* booking open badge pulse v1 */\n    .health-badge.booking-open .health-dot.opening-pulse {\n      background: var(--open) !important;\n      box-shadow: 0 0 15px var(--open) !important;\n      animation: pulse 1.8s ease-in-out infinite;\n    }\n\n    .health-badge.booking-open #service-status {\n      color: #7ee787;\n    }\n'
               text = text.replace('</style>', css + '\n  </style>', 1)
-
           path.write_text(text, encoding='utf-8')
           PY
 
