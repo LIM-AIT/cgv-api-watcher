@@ -2343,6 +2343,30 @@ function escapeHtml(value) {
       content.className = "theater-list";
       content.innerHTML = theaters.map((theater) => {
         const results = Array.isArray(theater.results) ? theater.results : [];
+        const openResult = results.find(
+          (result) => result?.imax_open || result?.status === "OPEN",
+        );
+
+        let bookingUrl = openResult?.booking_url || theater.booking_url;
+        let bookingLabel = "CGV 예매 페이지 열기";
+
+        if (openResult) {
+          const movieNo = data.movie_keyword === "오디세이" ? "30001323" : "";
+
+          if (!openResult.booking_url && movieNo && theater.site_no && openResult.date) {
+            const bookingParams = new URLSearchParams({
+              movNo: movieNo,
+              scnYmd: String(openResult.date).replaceAll("-", ""),
+              siteNm: `CGV ${theater.name}`,
+              siteNo: String(theater.site_no),
+            });
+
+            bookingUrl = `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
+          }
+
+          bookingLabel = "오디세이 IMAX 예매 바로가기";
+        }
+
         const rows = results.length
           ? results.map(renderResult).join("")
           : `
@@ -2370,11 +2394,11 @@ function escapeHtml(value) {
             <div class="booking-wrap">
               <a
                 class="booking-link"
-                href="${escapeHtml(theater.booking_url)}"
+                href="${escapeHtml(bookingUrl)}"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                CGV 예매 페이지 열기
+                ${escapeHtml(bookingLabel)}
               </a>
             </div>
           </article>
