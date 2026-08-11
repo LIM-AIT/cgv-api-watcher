@@ -25,41 +25,33 @@ jobs:
           path = Path('docs/index.html')
           text = path.read_text(encoding='utf-8')
 
-          old_results = '''        const results = Array.isArray(theater.results) ? theater.results : [];
-        const rows = results.length
-'''
-          new_results = '''        const results = Array.isArray(theater.results) ? theater.results : [];
-        const openResult = results.find(
-          (result) => result?.imax_open || result?.status === "OPEN",
-        );
-
-        let bookingUrl = openResult?.booking_url || theater.booking_url;
-        let bookingLabel = "CGV 예매 페이지 열기";
-
-        if (openResult) {
-          const movieNo = data.movie_keyword === "오디세이" ? "30001323" : "";
-
-          if (!openResult.booking_url && movieNo && theater.site_no && openResult.date) {
-            const bookingParams = new URLSearchParams({
-              movNo: movieNo,
-              scnYmd: String(openResult.date).replaceAll("-", ""),
-              siteNm: `CGV ${theater.name}`,
-              siteNo: String(theater.site_no),
-            });
-
-            bookingUrl = `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
-          }
-
-          bookingLabel = "오디세이 IMAX 예매 바로가기";
-        }
-
-        const rows = results.length
-'''
-          if old_results not in text:
-              if 'bookingLabel = "오디세이 IMAX 예매 바로가기"' not in text:
-                  raise SystemExit('renderTheaters result block not found')
-          else:
+          old_results = "        const results = Array.isArray(theater.results) ? theater.results : [];\n        const rows = results.length\n"
+          new_results = (
+              "        const results = Array.isArray(theater.results) ? theater.results : [];\n"
+              "        const openResult = results.find(\n"
+              "          (result) => result?.imax_open || result?.status === \"OPEN\",\n"
+              "        );\n\n"
+              "        let bookingUrl = openResult?.booking_url || theater.booking_url;\n"
+              "        let bookingLabel = \"CGV 예매 페이지 열기\";\n\n"
+              "        if (openResult) {\n"
+              "          const movieNo = data.movie_keyword === \"오디세이\" ? \"30001323\" : \"\";\n\n"
+              "          if (!openResult.booking_url && movieNo && theater.site_no && openResult.date) {\n"
+              "            const bookingParams = new URLSearchParams({\n"
+              "              movNo: movieNo,\n"
+              "              scnYmd: String(openResult.date).replaceAll(\"-\", \"\"),\n"
+              "              siteNm: `CGV ${theater.name}`,\n"
+              "              siteNo: String(theater.site_no),\n"
+              "            });\n\n"
+              "            bookingUrl = `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;\n"
+              "          }\n\n"
+              "          bookingLabel = \"오디세이 IMAX 예매 바로가기\";\n"
+              "        }\n\n"
+              "        const rows = results.length\n"
+          )
+          if old_results in text:
               text = text.replace(old_results, new_results, 1)
+          elif 'bookingLabel = "오디세이 IMAX 예매 바로가기"' not in text:
+              raise SystemExit('renderTheaters result block not found')
 
           old_href = '                href="${escapeHtml(theater.booking_url)}"'
           new_href = '                href="${escapeHtml(bookingUrl)}"'
@@ -68,10 +60,8 @@ jobs:
           elif new_href not in text:
               raise SystemExit('booking href not found')
 
-          old_label = '''                CGV 예매 페이지 열기
-'''
-          new_label = '''                ${escapeHtml(bookingLabel)}
-'''
+          old_label = '                CGV 예매 페이지 열기\n'
+          new_label = '                ${escapeHtml(bookingLabel)}\n'
           if old_label in text:
               text = text.replace(old_label, new_label, 1)
           elif '${escapeHtml(bookingLabel)}' not in text:
