@@ -1,4 +1,4 @@
-import("./chat-content-filter.js?v=1")
+import("./chat-content-filter.js?v=2")
   .then(() => import("./chat-identity-guard.js?v=2"))
   .catch((error) => {
     console.error("Chat guard modules failed to load", error);
