@@ -27,7 +27,7 @@ jobs:
         with:
           ref: main
 
-      - name: Update dashboard and attach realtime chat
+      - name: Keep generic dashboard header
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -35,8 +35,13 @@ jobs:
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
 
-          for old in ("CGV IMAX Spider-Man", "CGV IMAX 오디세이"):
-              text = text.replace(old, "CGV IMAX The Odyssey")
+          for old in (
+              "CGV IMAX Spider-Man",
+              "CGV IMAX 오디세이",
+              "CGV IMAX The Odyssey",
+              "CGV API Watcher",
+          ):
+              text = text.replace(old, "CGV WATCHER")
 
           if "./chat.css" not in text:
               text = text.replace(
@@ -60,13 +65,13 @@ jobs:
           git add docs/index.html
 
           if ! git diff --cached --quiet; then
-            git commit -m "Attach realtime chat to dashboard [skip ci]"
+            git commit -m "Keep dashboard header generic [skip ci]"
             git push origin HEAD:main || {
               git pull --rebase origin main
               git push origin HEAD:main
             }
           else
-            echo "Dashboard is already up to date."
+            echo "Dashboard header is already up to date."
           fi
 
   watch:
@@ -88,15 +93,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Ensure dashboard movie header
+      - name: Ensure generic dashboard header
         run: |
           python - <<'PY'
           from pathlib import Path
 
           path = Path("docs/index.html")
           text = path.read_text(encoding="utf-8")
-          for old in ("CGV IMAX Spider-Man", "CGV IMAX 오디세이"):
-              text = text.replace(old, "CGV IMAX The Odyssey")
+          for old in (
+              "CGV IMAX Spider-Man",
+              "CGV IMAX 오디세이",
+              "CGV IMAX The Odyssey",
+              "CGV API Watcher",
+          ):
+              text = text.replace(old, "CGV WATCHER")
           path.write_text(text, encoding="utf-8")
           PY
 
@@ -107,7 +117,7 @@ jobs:
           git add docs/index.html
 
           if ! git diff --cached --quiet; then
-            git commit -m "Keep dashboard header on The Odyssey [skip ci]"
+            git commit -m "Keep dashboard header on CGV WATCHER [skip ci]"
             git push origin HEAD:main || {
               git pull --rebase origin main
               git push origin HEAD:main
@@ -148,11 +158,21 @@ jobs:
             echo "Started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
             echo "========================================"
 
+            # Keep the existing Odyssey personal notification/state flow intact.
             python run.py --once
             watcher_exit=$?
 
             if [ "$watcher_exit" -ne 0 ]; then
-              echo "Watcher failed with exit code ${watcher_exit}."
+              echo "Legacy Odyssey watcher failed with exit code ${watcher_exit}."
+              echo "The multi-target status exporter will still be attempted."
+            fi
+
+            # Final status.json contains both Odyssey IMAX and Spider-Man SCREENX.
+            python run_multi_special.py
+            multi_exit=$?
+
+            if [ "$multi_exit" -ne 0 ]; then
+              echo "Multi-target status exporter failed with exit code ${multi_exit}."
               echo "The next cycle will continue."
             fi
 
