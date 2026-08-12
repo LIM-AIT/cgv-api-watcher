@@ -37,7 +37,6 @@
       return false;
     }
 
-    // Desired final order: live chat first, reaction-speed test immediately below it.
     if (
       liveChat.parentElement === main &&
       reactionGame.parentElement === main &&
@@ -48,6 +47,40 @@
 
     main.insertBefore(liveChat, footer);
     main.insertBefore(reactionGame, footer);
+    return true;
+  }
+
+  function placeRefreshButton() {
+    const button = document.getElementById("refresh-button");
+    const title =
+      document.querySelector(".movie-selector-title") ||
+      Array.from(document.querySelectorAll(".section-title, h2")).find((node) =>
+        node.textContent.includes("극장별 감시 상태")
+      );
+
+    if (!button || !title || !title.parentElement) return false;
+
+    let headingRow = title.parentElement;
+    if (!headingRow.classList.contains("theater-section-heading")) {
+      const parent = headingRow;
+      headingRow = document.createElement("div");
+      headingRow.className = "theater-section-heading";
+      parent.insertBefore(headingRow, title);
+      headingRow.appendChild(title);
+    }
+
+    if (button.parentElement !== headingRow) {
+      const oldContainer = button.parentElement;
+      headingRow.appendChild(button);
+      if (
+        oldContainer &&
+        oldContainer !== headingRow &&
+        oldContainer.children.length === 0
+      ) {
+        oldContainer.classList.add("empty-refresh-container");
+      }
+    }
+
     return true;
   }
 
@@ -229,6 +262,7 @@
   let contentObserver = null;
 
   function refreshTheaterUi() {
+    placeRefreshButton();
     removeGenericBookingButtons();
     applyDateMoreToggles();
   }
@@ -250,6 +284,7 @@
   }
 
   function verifyOrder() {
+    placeRefreshButton();
     const placed = placeInteractiveSections();
     attachContentObserver();
     refreshTheaterUi();
@@ -257,6 +292,7 @@
 
     if (stopTimer) window.clearTimeout(stopTimer);
     stopTimer = window.setTimeout(() => {
+      placeRefreshButton();
       placeInteractiveSections();
       attachContentObserver();
       refreshTheaterUi();
