@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/index.html'
+      - 'docs/app.html'
       - 'docs/*.js'
       - 'docs/*.css'
 
