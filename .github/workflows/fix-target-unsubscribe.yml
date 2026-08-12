@@ -27,88 +27,73 @@ jobs:
           alerts = Path("docs/alerts.js")
           text = alerts.read_text(encoding="utf-8")
 
-          old_parser = '''function parseTargetActionValue(value) {
-            const parts = String(value || "").trim().split(".");
-            if (parts.length !== 3) return null;
-            const [id, token, targetKey] = parts;
-            if (!id || !token || !TARGETS[targetKey]) return null;
-            return { id, token, targetKey };
-          }
-          '''
-          new_parser = old_parser + '''
-          function parseTargetActionValues(value) {
-            return String(value || "")
-              .split(",")
-              .map((item) => parseTargetActionValue(item))
-              .filter(Boolean);
-          }
-          '''
           if "function parseTargetActionValues" not in text:
-              if old_parser not in text:
-                  raise SystemExit("target parser block not found")
-              text = text.replace(old_parser, new_parser, 1)
+              marker = "\nfunction removeActionParams() {"
+              addition = '''
 
-          old_decl = '''  const targetUnsubscribe = parseTargetActionValue(
-            params.get("email_unsubscribe_target"),
-          );'''
-          new_decl = '''  const targetUnsubscribes = parseTargetActionValues(
-            params.get("email_unsubscribe_target"),
-          );'''
-          if old_decl in text:
-              text = text.replace(old_decl, new_decl, 1)
+function parseTargetActionValues(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => parseTargetActionValue(item))
+    .filter(Boolean);
+}
+'''
+              if marker not in text:
+                  raise SystemExit("removeActionParams marker not found")
+              text = text.replace(marker, addition + marker, 1)
 
-          old_handler = '''  if (targetUnsubscribe) {
-            const info = TARGETS[targetUnsubscribe.targetKey];
-            setAlertStatus(`${info.label} 알림을 해지하고 있습니다.`, "pending");
-            const { data, error } = await supabase.rpc(
-              "unsubscribe_cgv_email_subscription_target",
-              {
-                p_id: targetUnsubscribe.id,
-                p_token: targetUnsubscribe.token,
-                p_target_key: targetUnsubscribe.targetKey,
-              },
-            );
-            if (!error && data === true) {
-              setAlertStatus(`${info.label} 이메일 알림이 해지되었습니다.`, "success");
-            } else {
-              setAlertStatus("해지 링크가 유효하지 않거나 이미 해지된 알림입니다.", "error");
-            }
-            removeActionParams();
-            return;
-          }
-          '''
-          new_handler = '''  if (targetUnsubscribes.length) {
-            const targetKey = targetUnsubscribes[0].targetKey;
-            const sameTarget = targetUnsubscribes.filter(
-              (item) => item.targetKey === targetKey,
-            );
-            const info = TARGETS[targetKey];
-            setAlertStatus(`${info.label} 알림을 해지하고 있습니다.`, "pending");
-            const results = await Promise.all(
-              sameTarget.map(({ id, token }) =>
-                supabase.rpc("unsubscribe_cgv_email_subscription_target", {
-                  p_id: id,
-                  p_token: token,
-                  p_target_key: targetKey,
-                }),
-              ),
-            );
-            const succeeded = results.some(
-              (result) => !result.error && result.data === true,
-            );
-            if (succeeded) {
-              setAlertStatus(`${info.label} 이메일 알림이 해지되었습니다.`, "success");
-            } else {
-              setAlertStatus("해지 링크가 유효하지 않거나 이미 해지된 알림입니다.", "error");
-            }
-            removeActionParams();
-            return;
-          }
-          '''
-          if old_handler in text:
-              text = text.replace(old_handler, new_handler, 1)
-          elif new_handler not in text:
-              raise SystemExit("target unsubscribe handler block not found")
+          text = text.replace(
+              '''  const targetUnsubscribe = parseTargetActionValue(
+    params.get("email_unsubscribe_target"),
+  );''',
+              '''  const targetUnsubscribes = parseTargetActionValues(
+    params.get("email_unsubscribe_target"),
+  );''',
+              1,
+          )
+
+          start_marker = "  if (targetUnsubscribe) {"
+          end_marker = "\n  if (unsubscribes.length) {"
+          if start_marker in text:
+              start = text.index(start_marker)
+              end = text.index(end_marker, start)
+              replacement = '''  if (targetUnsubscribes.length) {
+    const targetKey = targetUnsubscribes[0].targetKey;
+    const sameTarget = targetUnsubscribes.filter(
+      (item) => item.targetKey === targetKey,
+    );
+    const info = TARGETS[targetKey];
+    setAlertStatus(`${info.label} 알림을 해지하고 있습니다.`, "pending");
+    const results = await Promise.all(
+      sameTarget.map(({ id, token }) =>
+        supabase.rpc("unsubscribe_cgv_email_subscription_target", {
+          p_id: id,
+          p_token: token,
+          p_target_key: targetKey,
+        }),
+      ),
+    );
+    const succeeded = results.some(
+      (result) => !result.error && result.data === true,
+    );
+    if (succeeded) {
+      setAlertStatus(`${info.label} 이메일 알림이 해지되었습니다.`, "success");
+    } else {
+      setAlertStatus(
+        "해지 링크가 유효하지 않거나 이미 해지된 알림입니다.",
+        "error",
+      );
+    }
+    removeActionParams();
+    return;
+  }
+'''
+              text = text[:start] + replacement + text[end:]
+          elif "if (targetUnsubscribes.length)" not in text:
+              raise SystemExit("target unsubscribe handler not found")
+
+          if "targetUnsubscribe =" in text:
+              raise SystemExit("old target unsubscribe declaration remains")
 
           alerts.write_text(text, encoding="utf-8")
 
