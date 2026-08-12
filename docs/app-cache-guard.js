@@ -1,9 +1,13 @@
+import("./chat-official-admin-direct.js?v=1").catch((error) => {
+  console.debug("Official admin chat decorator skipped", error);
+});
+
 (() => {
   const VERSION_URL = "./app-version.json";
   const VERSION_PARAM = "appv";
   const CHECK_INTERVAL_MS = 60000;
   const SERVICE_WORKER_SCOPE = "./";
-  const CONTROLLER_RELOAD_KEY = "cgv-sw-controller-reload-v3";
+  const CONTROLLER_RELOAD_KEY = "cgv-sw-controller-reload-v4";
 
   let checking = false;
   let reloadingForController = false;
@@ -32,7 +36,7 @@
         pageUrl.searchParams.get(VERSION_PARAM) ||
         Date.now().toString();
 
-      const workerUrl = `./sw.js?swv=3&t=${encodeURIComponent(pageToken)}`;
+      const workerUrl = `./sw.js?swv=4&t=${encodeURIComponent(pageToken)}`;
 
       await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
