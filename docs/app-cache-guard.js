@@ -2,7 +2,32 @@
   const VERSION_URL = "./app-version.json";
   const VERSION_PARAM = "appv";
   const CHECK_INTERVAL_MS = 60000;
+  const SERVICE_WORKER_URL = "./sw.js";
+  const SERVICE_WORKER_SCOPE = "./";
+
   let checking = false;
+  let reloadingForController = false;
+
+  async function registerFreshNetworkWorker() {
+    if (!("serviceWorker" in navigator)) return;
+
+    try {
+      await navigator.serviceWorker.register(SERVICE_WORKER_URL, {
+        scope: SERVICE_WORKER_SCOPE,
+        updateViaCache: "none",
+      });
+
+      await navigator.serviceWorker.ready;
+
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloadingForController) return;
+        reloadingForController = true;
+        window.location.reload();
+      });
+    } catch (error) {
+      console.debug("Service worker registration skipped", error);
+    }
+  }
 
   async function checkLatestVersion() {
     if (checking) return;
@@ -34,6 +59,7 @@
     }
   }
 
+  void registerFreshNetworkWorker();
   void checkLatestVersion();
 
   window.addEventListener("pageshow", (event) => {
