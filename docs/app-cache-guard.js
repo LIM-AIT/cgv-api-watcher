@@ -2,28 +2,51 @@
   const VERSION_URL = "./app-version.json";
   const VERSION_PARAM = "appv";
   const CHECK_INTERVAL_MS = 60000;
-  const SERVICE_WORKER_URL = "./sw.js";
   const SERVICE_WORKER_SCOPE = "./";
+  const CONTROLLER_RELOAD_KEY = "cgv-sw-controller-reload-v3";
 
   let checking = false;
   let reloadingForController = false;
+
+  function reloadOnceForController() {
+    if (reloadingForController) return;
+    if (sessionStorage.getItem(CONTROLLER_RELOAD_KEY) === "1") return;
+
+    reloadingForController = true;
+    sessionStorage.setItem(CONTROLLER_RELOAD_KEY, "1");
+    window.location.reload();
+  }
 
   async function registerFreshNetworkWorker() {
     if (!("serviceWorker" in navigator)) return;
 
     try {
-      await navigator.serviceWorker.register(SERVICE_WORKER_URL, {
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!navigator.serviceWorker.controller) return;
+        reloadOnceForController();
+      });
+
+      const pageUrl = new URL(window.location.href);
+      const pageToken =
+        pageUrl.searchParams.get("t") ||
+        pageUrl.searchParams.get(VERSION_PARAM) ||
+        Date.now().toString();
+
+      const workerUrl = `./sw.js?swv=3&t=${encodeURIComponent(pageToken)}`;
+
+      await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
         updateViaCache: "none",
       });
 
       await navigator.serviceWorker.ready;
 
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (reloadingForController) return;
-        reloadingForController = true;
-        window.location.reload();
-      });
+      if (!navigator.serviceWorker.controller) {
+        reloadOnceForController();
+        return;
+      }
+
+      sessionStorage.removeItem(CONTROLLER_RELOAD_KEY);
     } catch (error) {
       console.debug("Service worker registration skipped", error);
     }
@@ -63,11 +86,17 @@
   void checkLatestVersion();
 
   window.addEventListener("pageshow", (event) => {
-    if (event.persisted) void checkLatestVersion();
+    if (event.persisted) {
+      void registerFreshNetworkWorker();
+      void checkLatestVersion();
+    }
   });
 
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) void checkLatestVersion();
+    if (!document.hidden) {
+      void registerFreshNetworkWorker();
+      void checkLatestVersion();
+    }
   });
 
   window.setInterval(() => {
