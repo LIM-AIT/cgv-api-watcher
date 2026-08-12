@@ -1,0 +1,44 @@
+name: Bump Layout Asset V8
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/bump-layout-v8.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Bump layout asset to v8'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bump layout cache version
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('docs/index.html')
+          text = path.read_text(encoding='utf-8')
+          old = './layout-order.js?v=7'
+          new = './layout-order.js?v=8'
+          if old not in text and new not in text:
+              raise SystemExit('layout asset reference not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Commit cache bust
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/index.html
+          if ! git diff --cached --quiet; then
+            git commit -m "Use layout-order v8 [skip ci]"
+            git push origin HEAD:main
+          fi
