@@ -1,3 +1,7 @@
+import("./chat-identity-guard.js?v=1").catch((error) => {
+  console.error("Chat identity guard failed to load", error);
+});
+
 (() => {
   const STYLE_ID = "header-instagram-style-v2";
   const LINK_CLASS = "developer-instagram-link";
