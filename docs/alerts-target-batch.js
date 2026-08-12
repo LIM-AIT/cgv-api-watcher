@@ -31,14 +31,19 @@ function removeParam() {
   history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
-async function handleBatchTargetUnsubscribe() {
+async function handleTargetUnsubscribe() {
   const params = new URLSearchParams(location.search);
   const raw = params.get("email_unsubscribe_target");
-  // alerts.js already handles the normal single-subscription case.
-  if (!raw || !raw.includes(",")) return;
+  if (!raw) {
+    setStatus("유효한 알림 해지 정보가 없습니다.", "error");
+    return;
+  }
 
   const items = raw.split(",").map(parseItem).filter(Boolean);
-  if (!items.length) return;
+  if (!items.length) {
+    setStatus("알림 해지 링크가 올바르지 않습니다.", "error");
+    return;
+  }
 
   const targetKey = items[0].targetKey;
   const sameTarget = items.filter((item) => item.targetKey === targetKey);
@@ -68,7 +73,7 @@ async function handleBatchTargetUnsubscribe() {
 }
 
 function init() {
-  handleBatchTargetUnsubscribe().catch(() => {
+  handleTargetUnsubscribe().catch(() => {
     setStatus("알림 해지 요청을 처리하지 못했습니다.", "error");
   });
 }
