@@ -64,9 +64,7 @@
 
     const credit = document.querySelector("header .developer-credit");
     if (!credit) return false;
-
-    const existing = credit.querySelector(`.${LINK_CLASS}`);
-    if (existing) existing.remove();
+    if (credit.querySelector(`.${LINK_CLASS}`)) return true;
 
     const link = document.createElement("a");
     link.className = LINK_CLASS;
