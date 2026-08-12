@@ -88,10 +88,10 @@
           font-size: 15px !important;
         }
         .movie-select-button {
-          min-height: 27px;
-          padding: 4px 7px;
+          min-height: 30px;
+          padding: 5px 9px;
           border-radius: 8px;
-          font-size: 9px;
+          font-size: 11px;
         }
       }
     `;
