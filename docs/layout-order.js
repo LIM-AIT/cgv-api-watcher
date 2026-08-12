@@ -3,18 +3,25 @@
   const DEFAULT_VISIBLE_MMDD = 902;
   const DATE_MORE_STYLE_ID = "date-more-toggle-style-v1";
   const REACTION_LEADERBOARD_ASSET_ID = "reaction-leaderboard-asset-v1";
+  const MOVIE_SWITCHER_ASSET_ID = "movie-switcher-asset-v1";
 
-  function ensureReactionLeaderboardAsset() {
-    if (document.getElementById(REACTION_LEADERBOARD_ASSET_ID)) return;
-
+  function ensureModuleAsset(id, src) {
+    if (document.getElementById(id)) return;
     const script = document.createElement("script");
-    script.id = REACTION_LEADERBOARD_ASSET_ID;
+    script.id = id;
     script.type = "module";
-    script.src = "./reaction-leaderboard.js?v=1";
+    script.src = src;
     document.head.appendChild(script);
   }
 
-  ensureReactionLeaderboardAsset();
+  ensureModuleAsset(
+    REACTION_LEADERBOARD_ASSET_ID,
+    "./reaction-leaderboard.js?v=1",
+  );
+  ensureModuleAsset(
+    MOVIE_SWITCHER_ASSET_ID,
+    "./movie-switcher.js?v=1",
+  );
 
   function placeInteractiveSections() {
     const main = document.querySelector("main.app");
