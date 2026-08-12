@@ -5,6 +5,9 @@ const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+let lastVerifiedCount = null;
+let titleObserver = null;
+let renderQueued = false;
 
 function ensureStyles() {
   if (document.getElementById("imax-email-alert-count-style")) return;
@@ -50,7 +53,9 @@ function ensureStyles() {
   document.head.appendChild(style);
 }
 
-function renderCount(count) {
+function renderCount(count = lastVerifiedCount) {
+  if (count === null || count === undefined) return false;
+
   const title = document.querySelector("#imax-email-alert h2");
   if (!title) return false;
 
@@ -65,6 +70,38 @@ function renderCount(count) {
   return true;
 }
 
+function queueRenderCount() {
+  if (renderQueued || lastVerifiedCount === null) return;
+  renderQueued = true;
+  window.requestAnimationFrame(() => {
+    renderQueued = false;
+    renderCount();
+  });
+}
+
+function attachTitleObserver() {
+  const panel = document.getElementById("imax-email-alert");
+  if (!panel) return false;
+
+  titleObserver?.disconnect();
+  titleObserver = new MutationObserver(() => {
+    const title = panel.querySelector("h2");
+    if (
+      lastVerifiedCount !== null &&
+      title &&
+      !title.querySelector(".imax-email-alert-count")
+    ) {
+      queueRenderCount();
+    }
+  });
+  titleObserver.observe(panel, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  return true;
+}
+
 async function refreshSubscriberCount() {
   const { data, error } = await supabase.rpc("get_cgv_email_verified_count");
 
@@ -73,7 +110,8 @@ async function refreshSubscriberCount() {
     return;
   }
 
-  renderCount(data);
+  lastVerifiedCount = Number(data || 0);
+  renderCount();
 }
 
 async function initialize() {
@@ -84,7 +122,15 @@ async function initialize() {
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
+  attachTitleObserver();
   await refreshSubscriberCount();
+
+  document.addEventListener("cgv:movie-target-changed", () => {
+    window.setTimeout(() => {
+      attachTitleObserver();
+      renderCount();
+    }, 0);
+  });
 
   window.setInterval(() => {
     if (!document.hidden) {
