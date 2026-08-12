@@ -34,7 +34,7 @@ function isReservedNickname(value) {
 }
 
 function isOfficialAdminNickname(value) {
-  return nicknameKey(value) === nicknameKey(ADMIN_NICKNAME);
+  return normalizeNickname(value) === ADMIN_NICKNAME;
 }
 
 function getNameInput() {
