@@ -1,1 +1,3459 @@
-__PLACEHOLDER__
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="CGV IMAX 예매 오픈 감시 대시보드">
+  <title>CGV WATCHER</title>
+
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #21262d;
+      --border: #30363d;
+      --text: #f0f6fc;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --open: #3fb950;
+      --wait: #d29922;
+      --error: #f85149;
+      --idle: #8b949e;
+      --shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
+      --safe-bottom: max(18px, env(safe-area-inset-bottom));
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top, rgba(88, 166, 255, 0.13), transparent 32rem),
+        var(--bg);
+      color: var(--text);
+      font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+        Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+
+    a, button { -webkit-tap-highlight-color: transparent; }
+
+    .app {
+      width: min(100%, 1080px);
+      margin: 0 auto;
+      padding:
+        max(24px, env(safe-area-inset-top))
+        16px
+        calc(94px + var(--safe-bottom));
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(28px, 7vw, 44px);
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .health-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(22, 27, 34, 0.9);
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .health-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--idle);
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    .live-panel {
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+      padding: 20px;
+      border: 1px solid rgba(88, 166, 255, 0.34);
+      border-radius: 18px;
+      background:
+        linear-gradient(
+          145deg,
+          rgba(88, 166, 255, 0.12),
+          rgba(22, 27, 34, 0.97) 58%
+        );
+      box-shadow: var(--shadow);
+    }
+
+    .live-panel.updated {
+      animation: live-flash 1.1s ease;
+    }
+
+    .live-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+
+    .live-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .live-pulse {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--open);
+      box-shadow: 0 0 15px var(--open);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .live-state {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+
+    .progress-track {
+      overflow: hidden;
+      height: 8px;
+      margin-bottom: 14px;
+      border-radius: 999px;
+      background: var(--surface-2);
+    }
+
+    .progress-value {
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent), var(--open));
+      transition: width 1s linear;
+    }
+
+    .live-meta {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 7px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .live-meta strong {
+      color: var(--text);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .live-meta .warning { color: var(--wait); }
+    .live-meta .error { color: var(--error); }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .summary-card {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(22, 27, 34, 0.94);
+      box-shadow: var(--shadow);
+    }
+
+    .summary-label {
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .summary-value {
+      overflow-wrap: anywhere;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.45;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.025em;
+    }
+
+    .section-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .theater-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .theater-card {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(22, 27, 34, 0.96);
+      box-shadow: var(--shadow);
+    }
+
+    .theater-header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .theater-name {
+      margin: 0;
+      font-size: 19px;
+      letter-spacing: -0.025em;
+    }
+
+    .theater-code {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .result-list { display: grid; }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 62px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-row:last-child { border-bottom: 0; }
+
+    .result-date {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .result-main { min-width: 0; }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 11px currentColor;
+    }
+
+    .status-label {
+      min-width: 0;
+      overflow: hidden;
+      font-size: 14px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .status-open { color: var(--open); }
+    .status-wait { color: var(--wait); }
+    .status-error { color: var(--error); }
+    .status-idle { color: var(--idle); }
+
+    .movie-name,
+    .error-message {
+      margin-top: 5px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .imax-count {
+      padding: 6px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .booking-wrap {
+      padding: 14px 16px 16px;
+      border-top: 1px solid var(--border);
+      background: rgba(13, 17, 23, 0.28);
+    }
+
+    .booking-link {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 46px;
+      padding: 12px 16px;
+      border: 1px solid rgba(88, 166, 255, 0.38);
+      border-radius: 12px;
+      background:
+        linear-gradient(
+          180deg,
+          rgba(88, 166, 255, 0.18),
+          rgba(88, 166, 255, 0.1)
+        );
+      color: #a5d6ff;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .loading,
+    .fatal-error,
+    .empty {
+      padding: 30px 20px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .fatal-error { color: var(--error); }
+
+    .footer {
+      margin-top: 28px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.65;
+    }
+
+    .refresh-bar {
+      position: fixed;
+      z-index: 20;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      padding: 10px 16px var(--safe-bottom);
+      background:
+        linear-gradient(
+          180deg,
+          rgba(13, 17, 23, 0),
+          rgba(13, 17, 23, 0.94) 24%,
+          rgba(13, 17, 23, 1)
+        );
+      pointer-events: none;
+    }
+
+    .refresh-inner {
+      width: min(100%, 1080px);
+      margin: 0 auto;
+      pointer-events: auto;
+    }
+
+    .refresh-button {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-2);
+      color: var(--text);
+      box-shadow: var(--shadow);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .refresh-button:disabled {
+      opacity: 0.65;
+      cursor: default;
+    }
+
+    .refresh-button.loading-state .refresh-icon {
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.72); }
+    }
+
+    @keyframes live-flash {
+      0% { box-shadow: 0 0 0 rgba(63, 185, 80, 0); }
+      35% { box-shadow: 0 0 34px rgba(63, 185, 80, 0.45); }
+      100% { box-shadow: var(--shadow); }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (min-width: 760px) {
+      .app {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .theater-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .result-row {
+        grid-template-columns: 84px minmax(0, 1fr) auto;
+      }
+
+      .refresh-bar {
+        padding-right: 24px;
+        padding-left: 24px;
+      }
+
+      .refresh-button {
+        width: 220px;
+        margin-left: auto;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .topbar { display: block; }
+      .health-badge { margin-top: 16px; }
+      .summary-card { padding: 14px; }
+      .summary-value { font-size: 14px; }
+
+      .result-row {
+        grid-template-columns: 58px minmax(0, 1fr);
+      }
+
+      .imax-count {
+        grid-column: 2;
+        justify-self: start;
+        margin-top: -2px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .summary-grid { grid-template-columns: 1fr; }
+
+      .result-row {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+
+      .imax-count { grid-column: auto; }
+    }
+  
+    @media (max-width: 640px) {
+      body {
+        padding-bottom: 88px;
+      }
+
+      main {
+        width: 100%;
+        padding: 14px;
+      }
+
+      header {
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .brand h1 {
+        font-size: 21px;
+        line-height: 1.15;
+      }
+
+      .brand p {
+        display: none;
+      }
+
+      .service-badge {
+        flex-shrink: 0;
+        font-size: 12px;
+        padding: 7px 10px;
+      }
+
+      .live-panel {
+        padding: 16px;
+        margin-bottom: 14px;
+        border-radius: 16px;
+      }
+
+      .live-head {
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .live-title {
+        font-size: 11px;
+      }
+
+      .live-state {
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .live-meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        font-size: 12px;
+      }
+
+      .live-meta span:first-child,
+      .live-meta span:nth-child(2) {
+        display: none;
+      }
+
+      .live-meta span:nth-child(3),
+      .live-meta span:nth-child(5) {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        padding: 10px 12px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+      }
+
+      .live-meta strong {
+        font-size: 16px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .summary-card {
+        min-height: 0;
+        padding: 13px;
+        border-radius: 14px;
+      }
+
+      .summary-label {
+        font-size: 10px;
+      }
+
+      .summary-value {
+        margin-top: 5px;
+        font-size: 14px;
+        line-height: 1.3;
+      }
+
+      .section-header {
+        align-items: flex-end;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .section-title {
+        font-size: 17px;
+      }
+
+      .section-hint {
+        display: none;
+      }
+
+      .theater-grid {
+        grid-template-columns: 1fr;
+        gap: 9px;
+      }
+
+      .theater-card {
+        padding: 14px;
+        border-radius: 14px;
+      }
+
+      .theater-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .theater-name {
+        font-size: 15px;
+      }
+
+      .theater-status {
+        flex-shrink: 0;
+        font-size: 11px;
+        padding: 6px 8px;
+      }
+
+      .theater-detail {
+        margin-top: 8px;
+        font-size: 12px;
+      }
+
+      .refresh-bar {
+        padding:
+          10px
+          max(14px, env(safe-area-inset-right))
+          calc(10px + env(safe-area-inset-bottom))
+          max(14px, env(safe-area-inset-left));
+      }
+
+      .refresh-inner {
+        width: 100%;
+      }
+
+      .refresh-button {
+        width: 100%;
+        min-height: 48px;
+        justify-content: center;
+        border-radius: 14px;
+        font-size: 14px;
+      }
+
+
+      .live-panel {
+        padding: 13px 14px;
+      }
+
+      .live-head {
+        margin-bottom: 8px;
+      }
+
+      .live-title {
+        display: none;
+      }
+
+      .live-state {
+        width: 100%;
+        font-size: 14px;
+        text-align: left;
+      }
+
+      .live-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 8px;
+        font-size: 11px;
+      }
+
+      .live-meta > span:first-child,
+      .live-meta > span:nth-child(2),
+      .live-meta > span:nth-child(4) {
+        display: none;
+      }
+
+      .live-meta > span:nth-child(3),
+      .live-meta > span:nth-child(5) {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+        padding: 0;
+        background: none;
+        border-radius: 0;
+      }
+
+
+      .summary-grid {
+        display: none;
+      }
+
+      .live-panel {
+        margin-bottom: 18px;
+      }
+
+
+      .section-header {
+        margin-top: 0;
+      }
+
+      .theater-grid {
+        gap: 10px;
+      }
+
+
+      .live-meta strong {
+        font-size: 12px;
+        line-height: 1.2;
+      }
+    }
+
+
+    @media (max-width: 640px) {
+      .service-badge {
+        display: flex;
+        max-width: 100%;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 3px 7px;
+        padding: 8px 11px;
+      }
+
+
+      .summary-grid {
+        display: none !important;
+      }
+
+      .live-panel {
+        padding: 10px 12px;
+        margin-bottom: 14px;
+      }
+
+      .live-head {
+        display: none;
+      }
+
+      .live-meta {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px 7px;
+        font-size: 11px;
+      }
+
+      .live-meta > span:first-child,
+      .live-meta > span:nth-child(2) {
+        display: none;
+      }
+
+      .live-meta > span:nth-child(3),
+      .live-meta > span:nth-child(4),
+      .live-meta > span:nth-child(5) {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: baseline;
+        gap: 4px;
+        padding: 0;
+        background: none;
+        border-radius: 0;
+      }
+
+      .live-meta strong {
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .section-header {
+        margin-top: 0;
+        margin-bottom: 10px;
+      }
+    }
+
+  
+    /* final separate mobile badges */
+
+    @media (max-width: 640px) {
+      header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: stretch;
+        gap: 10px;
+      }
+
+      header .brand {
+        grid-column: 1 / -1;
+      }
+
+      .service-badge {
+        grid-column: 1;
+        display: inline-flex;
+        width: max-content;
+        min-height: 42px;
+        align-items: center;
+        padding: 9px 12px;
+        flex-wrap: nowrap;
+        border-radius: 14px;
+        white-space: nowrap;
+      }
+
+
+    }
+
+  
+
+    /* final mobile header alignment */
+    @media (max-width: 640px) {
+      header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        column-gap: 10px;
+        row-gap: 8px;
+        margin-bottom: 14px;
+      }
+
+      header .brand {
+        display: contents;
+      }
+
+      header .eyebrow {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: center;
+        margin: 0;
+      }
+
+      header .service-badge {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: start;
+        justify-self: end;
+        width: max-content;
+        min-height: 0;
+        margin: 0;
+        padding: 7px 10px;
+        flex-wrap: nowrap;
+        border-radius: 999px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      header h1 {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        margin: 0;
+      }
+
+      header .brand p {
+        display: block;
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin: 2px 0 0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .mobile-watch-summary,
+      .mobile-header-summary {
+        display: none !important;
+      }
+    }
+
+  
+
+    /* definitive mobile badge position */
+    @media (max-width: 640px) {
+      header {
+        position: relative !important;
+        display: block !important;
+        padding-top: 0;
+      }
+
+      header .brand {
+        display: block !important;
+        padding-right: 0;
+      }
+
+      header .eyebrow {
+        max-width: calc(100% - 132px);
+        margin: 0 0 8px;
+      }
+
+      header .service-badge {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        width: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 7px 10px !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      header h1 {
+        margin: 0 0 10px;
+      }
+
+      header .brand p {
+        display: block;
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+    }
+
+  
+    /* status badge mobile top-right v2 */
+    @media (max-width: 640px) {
+      header {
+        position: relative !important;
+        display: block !important;
+      }
+
+      header .header-status-badge {
+        position: absolute !important;
+        top: 0 !important;
+        right: 0 !important;
+        left: auto !important;
+        bottom: auto !important;
+
+        display: inline-flex !important;
+        width: auto !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 7px 10px !important;
+
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 999px !important;
+        font-size: 11px !important;
+        white-space: nowrap !important;
+        z-index: 20 !important;
+      }
+
+      header .eyebrow {
+        max-width: calc(100% - 125px) !important;
+        padding-right: 6px !important;
+      }
+
+      .mobile-watch-summary,
+      .mobile-header-summary {
+        display: none !important;
+      }
+    }
+
+  
+
+    /* compact two-column theater layout on mobile */
+    @media (max-width: 640px) {
+      .section-title {
+        margin-bottom: 2px;
+      }
+
+      #content.theater-list,
+      .theater-list {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+        align-items: start;
+      }
+
+      .theater-card {
+        min-width: 0;
+        padding: 0 !important;
+        overflow: hidden;
+        border-radius: 14px !important;
+      }
+
+      .theater-header {
+        display: block !important;
+        padding: 11px 10px 9px !important;
+        text-align: center;
+      }
+
+      .theater-name {
+        margin: 0 !important;
+        overflow: hidden;
+        font-size: 13px !important;
+        line-height: 1.25 !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .theater-code {
+        display: none !important;
+      }
+
+      .result-list {
+        width: 100%;
+      }
+
+      .result-row {
+        display: grid !important;
+        grid-template-columns: 38px minmax(0, 1fr) !important;
+        gap: 5px !important;
+        min-height: 0 !important;
+        padding: 8px 8px !important;
+        align-items: center !important;
+      }
+
+      .result-date {
+        font-size: 10px !important;
+        line-height: 1.2 !important;
+        white-space: nowrap;
+      }
+
+      .result-main {
+        min-width: 0;
+      }
+
+      .status-line {
+        gap: 5px !important;
+        min-width: 0;
+      }
+
+      .status-dot {
+        width: 7px !important;
+        height: 7px !important;
+        flex: 0 0 7px;
+      }
+
+      .status-label {
+        overflow: hidden;
+        font-size: 11px !important;
+        line-height: 1.2 !important;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .movie-name,
+      .error-message {
+        display: none !important;
+      }
+
+      .imax-count {
+        grid-column: 2;
+        justify-self: start;
+        margin-top: 3px;
+        padding: 3px 6px !important;
+        font-size: 9px !important;
+        line-height: 1.2;
+      }
+
+      .booking-wrap {
+        padding: 8px !important;
+      }
+
+      .booking-link {
+        min-height: 34px !important;
+        padding: 7px 5px !important;
+        border-radius: 9px !important;
+        font-size: 10px !important;
+        line-height: 1.2 !important;
+        text-align: center;
+      }
+
+      .refresh-bar {
+        z-index: 100;
+      }
+    }
+
+  
+    /* reaction game v1 */
+    .reaction-game {
+      width: 100%;
+      margin: 22px 0 110px;
+      padding: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.035);
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.2);
+    }
+
+    .reaction-game-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .reaction-game-title {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .reaction-game-description {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .reaction-game-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+      gap: 12px;
+    }
+
+    .reaction-play-panel,
+    .reaction-ranking-panel {
+      min-width: 0;
+      padding: 13px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 14px;
+      background: rgba(8, 15, 25, 0.42);
+    }
+
+    .reaction-name-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .reaction-name-input {
+      min-width: 0;
+      height: 40px;
+      padding: 0 12px;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 10px;
+      outline: none;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .reaction-name-input:focus {
+      border-color: rgba(96, 165, 250, 0.75);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
+
+    .reaction-start-button {
+      height: 40px;
+      padding: 0 13px;
+      border: 1px solid rgba(96, 165, 250, 0.55);
+      border-radius: 10px;
+      background: rgba(37, 99, 235, 0.2);
+      color: #dbeafe;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .reaction-start-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .reaction-target {
+      display: flex;
+      width: 100%;
+      min-height: 112px;
+      padding: 14px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      text-align: center;
+      transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        transform 100ms ease;
+    }
+
+    .reaction-target:active {
+      transform: scale(0.985);
+    }
+
+    .reaction-target.waiting {
+      border-color: rgba(245, 158, 11, 0.5);
+      background: rgba(245, 158, 11, 0.1);
+      color: #fbbf24;
+    }
+
+    .reaction-target.ready {
+      border-color: rgba(34, 197, 94, 0.8);
+      background: rgba(34, 197, 94, 0.24);
+      color: #dcfce7;
+      box-shadow: 0 0 26px rgba(34, 197, 94, 0.16);
+    }
+
+    .reaction-target.failed {
+      border-color: rgba(239, 68, 68, 0.72);
+      background: rgba(239, 68, 68, 0.15);
+      color: #fecaca;
+    }
+
+    .reaction-target.result {
+      border-color: rgba(96, 165, 250, 0.7);
+      background: rgba(59, 130, 246, 0.13);
+      color: #dbeafe;
+    }
+
+    .reaction-target-main {
+      display: block;
+      font-size: 18px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .reaction-target-sub {
+      display: block;
+      margin-top: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.82;
+    }
+
+    .reaction-ranking-title {
+      margin: 1px 0 9px;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .reaction-ranking-list {
+      display: grid;
+      gap: 5px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .reaction-ranking-item {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 7px;
+      min-height: 27px;
+      padding: 5px 8px;
+      align-items: center;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.035);
+      font-size: 11px;
+    }
+
+    .reaction-ranking-number {
+      color: #60a5fa;
+      font-weight: 900;
+    }
+
+    .reaction-ranking-name {
+      overflow: hidden;
+      color: var(--text);
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .reaction-ranking-time {
+      color: #fbbf24;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .reaction-ranking-empty {
+      padding: 14px 8px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .reaction-game-note {
+      margin: 11px 0 0;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      .reaction-game {
+        margin: 18px 0 104px;
+        padding: 12px;
+        border-radius: 15px;
+      }
+
+      .reaction-game-header {
+        margin-bottom: 10px;
+      }
+
+      .reaction-game-title {
+        font-size: 15px;
+      }
+
+      .reaction-game-description {
+        font-size: 10px;
+      }
+
+      .reaction-game-grid {
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+        gap: 8px;
+      }
+
+      .reaction-play-panel,
+      .reaction-ranking-panel {
+        padding: 9px;
+        border-radius: 11px;
+      }
+
+      .reaction-name-row {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 6px;
+      }
+
+      .reaction-name-input,
+      .reaction-start-button {
+        width: 100%;
+        height: 34px;
+        font-size: 10px;
+      }
+
+      .reaction-target {
+        min-height: 104px;
+        padding: 10px 7px;
+      }
+
+      .reaction-target-main {
+        font-size: 14px;
+      }
+
+      .reaction-target-sub {
+        font-size: 9px;
+      }
+
+      .reaction-ranking-title {
+        font-size: 11px;
+      }
+
+      .reaction-ranking-item {
+        grid-template-columns: 17px minmax(0, 1fr);
+        gap: 4px;
+        padding: 5px 6px;
+        font-size: 9px;
+      }
+
+      .reaction-ranking-time {
+        grid-column: 2;
+        font-size: 9px;
+      }
+
+      .reaction-ranking-empty {
+        padding: 10px 3px;
+        font-size: 9px;
+      }
+
+      .reaction-game-note {
+        font-size: 9px;
+      }
+    }
+
+  
+    /* compact refresh button beside theater title */
+    .theater-section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .theater-section-heading .section-title {
+      margin: 0;
+    }
+
+    .theater-section-heading #refresh-button {
+      position: static !important;
+      inset: auto !important;
+      width: auto !important;
+      min-width: 0 !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 8px 12px !important;
+      border-radius: 10px !important;
+      font-size: 12px !important;
+      line-height: 1.2 !important;
+      white-space: nowrap;
+      box-shadow: none !important;
+    }
+
+    .theater-section-heading #refresh-button .refresh-icon {
+      margin-right: 5px;
+    }
+
+    .empty-refresh-container {
+      display: none !important;
+    }
+
+    @media (max-width: 640px) {
+      .theater-section-heading {
+        margin-bottom: 10px;
+      }
+
+      .theater-section-heading .section-title {
+        font-size: 21px !important;
+      }
+
+      .theater-section-heading #refresh-button {
+        padding: 7px 10px !important;
+        border-radius: 9px !important;
+        font-size: 10px !important;
+      }
+
+      .theater-section-heading #refresh-button .refresh-icon {
+        margin-right: 3px;
+      }
+    }
+
+  
+
+    /* refresh button align right */
+    .theater-section-heading {
+      width: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+    }
+
+    .theater-section-heading .section-title {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+    }
+
+    .theater-section-heading #refresh-button {
+      margin-left: auto !important;
+      flex: 0 0 auto !important;
+    }
+
+    @media (max-width: 640px) {
+      .theater-section-heading {
+        gap: 12px !important;
+      }
+    }
+
+  
+    /* reaction game final flow position */
+    #reaction-game.reaction-game {
+      position: relative !important;
+      top: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      left: auto !important;
+      inset: auto !important;
+      display: block !important;
+      grid-column: 1 / -1 !important;
+      width: 100% !important;
+      clear: both !important;
+      float: none !important;
+      margin: 20px 0 40px !important;
+      z-index: 1 !important;
+      transform: none !important;
+    }
+
+    #content.theater-list {
+      position: relative;
+      z-index: 2;
+      margin-bottom: 0 !important;
+    }
+
+    @media (max-width: 640px) {
+      #reaction-game.reaction-game {
+        margin: 18px 0 32px !important;
+      }
+
+      .reaction-game-title {
+        white-space: nowrap;
+      }
+    }
+
+  
+
+    /* final mobile vertical compression */
+    @media (max-width: 640px) {
+      main {
+        padding-bottom: 18px !important;
+      }
+
+      #live-panel,
+      .live-panel {
+        margin-top: 10px !important;
+        margin-bottom: 18px !important;
+        min-height: 50px !important;
+        padding: 10px 12px !important;
+      }
+
+      .theater-section-heading {
+        margin-top: 0 !important;
+        margin-bottom: 8px !important;
+      }
+
+      .theater-section-heading .section-title {
+        margin: 0 !important;
+        line-height: 1.15 !important;
+      }
+
+      #content.theater-list,
+      .theater-list {
+        gap: 10px !important;
+        margin-top: 0 !important;
+      }
+
+      .theater-header {
+        padding: 9px 8px 8px !important;
+      }
+
+      .theater-name {
+        font-size: 12px !important;
+        line-height: 1.15 !important;
+      }
+
+      .result-row {
+        min-height: 0 !important;
+        padding: 6px 7px !important;
+      }
+
+      .result-date {
+        font-size: 9px !important;
+      }
+
+      .status-label {
+        font-size: 10px !important;
+      }
+
+      .imax-count {
+        margin-top: 2px !important;
+        padding: 2px 6px !important;
+        font-size: 8px !important;
+      }
+
+      .booking-wrap {
+        padding: 6px !important;
+      }
+
+      .booking-link {
+        min-height: 30px !important;
+        padding: 6px 4px !important;
+        font-size: 9px !important;
+      }
+
+      #reaction-game.reaction-game {
+        margin: 12px 0 18px !important;
+        padding: 10px !important;
+      }
+
+      .reaction-game-header {
+        margin-bottom: 7px !important;
+      }
+
+      .reaction-game-title {
+        font-size: 14px !important;
+        line-height: 1.2 !important;
+      }
+
+      .reaction-game-description {
+        margin-top: 2px !important;
+        font-size: 9px !important;
+      }
+
+      .reaction-game-grid {
+        gap: 4px !important;
+      }
+
+      .reaction-play-panel,
+      .reaction-ranking-panel {
+        padding: 7px !important;
+      }
+
+      .reaction-name-row {
+        margin-bottom: 6px !important;
+      }
+
+      .reaction-name-input,
+      .reaction-start-button {
+        height: 31px !important;
+      }
+
+      .reaction-target {
+        min-height: 78px !important;
+        padding: 8px 5px !important;
+      }
+
+      .reaction-target-main {
+        font-size: 13px !important;
+      }
+
+      .reaction-target-sub {
+        margin-top: 3px !important;
+        font-size: 8px !important;
+      }
+
+      .reaction-ranking-item {
+        min-height: 24px !important;
+        padding: 4px 5px !important;
+      }
+
+      .reaction-game-note {
+        margin-top: 7px !important;
+        font-size: 8px !important;
+      }
+    }
+
+  
+
+    /* move disclaimer upward on mobile */
+    @media (max-width: 640px) {
+      .disclaimer,
+      footer,
+      .notice {
+        margin-top: 8px !important;
+        padding-top: 0 !important;
+      }
+
+      .disclaimer p,
+      footer p,
+      .notice p {
+        margin-top: 2px !important;
+        margin-bottom: 2px !important;
+        line-height: 1.35 !important;
+      }
+    }
+
+  
+    /* developer label and compact live panel */
+    header .brand p {
+      text-align: right !important;
+      font-size: 11px !important;
+      line-height: 1.2 !important;
+      margin-top: 4px !important;
+    }
+
+    #live-panel,
+    .live-panel {
+      min-height: 38px !important;
+      padding: 7px 12px !important;
+      margin-top: 8px !important;
+      margin-bottom: 12px !important;
+      border-radius: 14px !important;
+    }
+
+    #live-panel *,
+    .live-panel * {
+      line-height: 1.15 !important;
+    }
+
+    @media (max-width: 640px) {
+      header .brand p {
+        margin-top: 2px !important;
+        font-size: 10px !important;
+      }
+
+      #live-panel,
+      .live-panel {
+        min-height: 36px !important;
+        padding: 6px 10px !important;
+        margin-top: 7px !important;
+        margin-bottom: 10px !important;
+      }
+    }
+
+  
+
+    /* center live panel content vertically */
+    #live-panel,
+    .live-panel {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      box-sizing: border-box !important;
+      min-height: 36px !important;
+      padding: 7px 12px !important;
+    }
+
+    #live-panel > *,
+    .live-panel > * {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    @media (max-width: 640px) {
+      #live-panel,
+      .live-panel {
+        min-height: 36px !important;
+        padding-top: 7px !important;
+        padding-bottom: 7px !important;
+      }
+    }
+
+  
+
+    /* developer credit alignment */
+    header p {
+      width: 100% !important;
+      margin: 4px 0 0 !important;
+      text-align: right !important;
+      font-size: 11px !important;
+      line-height: 1.2 !important;
+      color: var(--muted) !important;
+    }
+
+    @media (max-width: 640px) {
+      header p {
+        margin-top: 3px !important;
+        font-size: 10px !important;
+      }
+    }
+
+  
+
+    /* restore complete header brand v1 */
+    header {
+      position: relative !important;
+    }
+
+    header .brand {
+      display: block !important;
+      width: 100% !important;
+    }
+
+    header .eyebrow {
+      margin: 0 0 8px !important;
+      color: #60a5fa !important;
+      font-size: 13px !important;
+      font-weight: 900 !important;
+      letter-spacing: 0.08em !important;
+      text-align: left !important;
+    }
+
+    header .brand h1 {
+      margin: 0 !important;
+      font-size: clamp(30px, 5vw, 43px) !important;
+      line-height: 1.08 !important;
+      text-align: left !important;
+    }
+
+    header .developer-credit {
+      display: block !important;
+      width: 100% !important;
+      margin: 8px 0 0 !important;
+      color: var(--muted) !important;
+      font-size: 11px !important;
+      line-height: 1.3 !important;
+      text-align: right !important;
+    }
+
+    @media (max-width: 640px) {
+      header .brand {
+        padding-right: 0 !important;
+      }
+
+      header .eyebrow {
+        max-width: calc(100% - 130px) !important;
+        margin-bottom: 7px !important;
+        font-size: 11px !important;
+      }
+
+      header .brand h1 {
+        font-size: 31px !important;
+      }
+
+      header .developer-credit {
+        margin-top: 8px !important;
+        font-size: 10px !important;
+      }
+    }
+
+  
+
+    /* mobile result row refinement */
+    @media (max-width: 640px) {
+      .result-row {
+        grid-template-columns: 48px minmax(0, 1fr) !important;
+        column-gap: 8px !important;
+      }
+
+      .result-date {
+        font-size: 11px !important;
+        font-weight: 800 !important;
+        line-height: 1.2 !important;
+      }
+
+      .result-main {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        min-width: 0;
+      }
+
+      .status-line {
+        flex: 0 1 auto;
+        min-width: 0;
+      }
+
+      .status-label {
+        font-size: 11px !important;
+      }
+
+      .imax-count {
+        grid-column: auto !important;
+        grid-row: auto !important;
+        justify-self: auto !important;
+        align-self: center !important;
+        margin: 0 !important;
+        padding: 3px 7px !important;
+        font-size: 9px !important;
+        line-height: 1 !important;
+        white-space: nowrap;
+      }
+    }
+
+  
+
+    /* final single-line mobile result row */
+    @media (max-width: 640px) {
+      .result-row {
+        display: grid !important;
+        grid-template-columns: 48px minmax(0, 1fr) auto !important;
+        grid-template-rows: auto !important;
+        column-gap: 7px !important;
+        align-items: center !important;
+        padding: 8px 9px !important;
+      }
+
+      .result-date {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        align-self: center !important;
+        font-size: 12px !important;
+        font-weight: 800 !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+      }
+
+      .result-main {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        display: block !important;
+        min-width: 0 !important;
+      }
+
+      .status-line {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        min-width: 0 !important;
+        white-space: nowrap !important;
+      }
+
+      .status-label {
+        font-size: 11px !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+      }
+
+      .imax-count {
+        grid-column: 3 !important;
+        grid-row: 1 !important;
+        align-self: center !important;
+        justify-self: end !important;
+        width: auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 4px 7px !important;
+        font-size: 9px !important;
+        line-height: 1 !important;
+        white-space: nowrap !important;
+      }
+    }
+
+
+    /* fit full IMAX status text on mobile */
+    @media (max-width: 640px) {
+      .result-row {
+        grid-template-columns: 44px minmax(0, 1fr) auto !important;
+        column-gap: 5px !important;
+        padding-left: 7px !important;
+        padding-right: 7px !important;
+      }
+
+      .result-date {
+        font-size: 11px !important;
+      }
+
+      .result-main {
+        margin-left: -2px !important;
+        overflow: visible !important;
+      }
+
+      .status-line {
+        gap: 4px !important;
+        overflow: visible !important;
+      }
+
+      .status-dot {
+        width: 6px !important;
+        height: 6px !important;
+        flex-basis: 6px !important;
+      }
+
+      .status-label {
+        overflow: visible !important;
+        max-width: none !important;
+        font-size: 10px !important;
+        letter-spacing: -0.03em !important;
+        line-height: 1 !important;
+        text-overflow: clip !important;
+        white-space: nowrap !important;
+      }
+
+      .imax-count {
+        min-width: 0 !important;
+        padding: 3px 5px !important;
+        font-size: 8px !important;
+      }
+    }
+
+  
+
+    /* enlarge mobile theater cards slightly */
+    @media (max-width: 640px) {
+      .theater-header {
+        padding: 11px 9px 10px !important;
+      }
+
+      .theater-name {
+        font-size: 13px !important;
+        line-height: 1.2 !important;
+      }
+
+      .result-row {
+        min-height: 47px !important;
+        padding-top: 9px !important;
+        padding-bottom: 9px !important;
+      }
+
+      .result-date {
+        font-size: 12px !important;
+        line-height: 1.1 !important;
+      }
+
+      .status-dot {
+        width: 7px !important;
+        height: 7px !important;
+        flex-basis: 7px !important;
+      }
+
+      .status-label {
+        font-size: 11px !important;
+        letter-spacing: -0.04em !important;
+      }
+
+      .imax-count {
+        padding: 4px 6px !important;
+        font-size: 9px !important;
+      }
+
+      .booking-wrap {
+        padding: 8px !important;
+      }
+
+      .booking-link {
+        min-height: 36px !important;
+        padding: 8px 5px !important;
+        font-size: 10px !important;
+      }
+    }
+
+  
+
+    /* move main title slightly downward */
+    @media (max-width: 640px) {
+      header .brand h1 {
+        margin-top: 6px !important;
+      }
+    }
+
+  
+
+    /* force main title downward */
+    @media (max-width: 640px) {
+      header .brand h1,
+      header h1 {
+        position: relative !important;
+        top: 8px !important;
+        margin-bottom: 8px !important;
+      }
+    }
+
+  
+
+    /* move title group downward */
+    @media (max-width: 640px) {
+      header .brand h1 {
+        position: relative !important;
+        top: 18px !important;
+        margin-bottom: 14px !important;
+      }
+
+      header .developer-credit {
+        position: relative !important;
+        top: 6px !important;
+        margin-top: 4px !important;
+      }
+    }
+
+  
+
+    /* move cloud monitoring downward */
+    @media (max-width: 640px) {
+      header .eyebrow {
+        position: relative !important;
+        top: 4px !important;
+      }
+    }
+
+  
+
+    /* force developer credit downward */
+    @media (max-width: 640px) {
+      header .developer-credit {
+        position: relative !important;
+        top: 16px !important;
+        margin-top: 6px !important;
+        margin-bottom: 16px !important;
+      }
+    }
+
+
+    /* weekday date label mobile fit v1 */
+    @media (max-width: 640px) {
+      .result-row {
+        grid-template-columns: 56px minmax(0, 1fr) auto !important;
+      }
+
+      .result-date {
+        font-size: 11px !important;
+        letter-spacing: -0.02em !important;
+        white-space: nowrap !important;
+      }
+    }
+
+  
+    /* booking open badge pulse v1 */
+    .health-badge.booking-open .health-dot.opening-pulse {
+      background: var(--open) !important;
+      box-shadow: 0 0 15px var(--open) !important;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    .health-badge.booking-open #service-status {
+      color: #7ee787;
+    }
+
+  </style>
+  <style id="date-booking-buttons-v1">
+    .result-actions {
+      display: flex;
+      align-items: center;
+      justify-self: end;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    .result-booking-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 5px 9px;
+      border: 1px solid rgba(63, 185, 80, 0.42);
+      border-radius: 999px;
+      background: rgba(63, 185, 80, 0.1);
+      color: #7ee787;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1;
+      text-decoration: none;
+      transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+    }
+
+    .result-booking-link:hover {
+      border-color: rgba(63, 185, 80, 0.7);
+      background: rgba(63, 185, 80, 0.18);
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 520px) {
+      .result-row {
+        grid-template-columns: 56px minmax(0, 1fr) auto !important;
+        gap: 4px !important;
+      }
+
+      .result-main {
+        min-width: 0;
+      }
+
+      .status-line {
+        gap: 6px;
+      }
+
+      .status-label {
+        font-size: 13px;
+      }
+
+      .result-actions {
+        grid-column: 3 !important;
+        justify-self: end !important;
+        align-self: center;
+        margin-top: 0 !important;
+        gap: 0;
+      }
+
+      .result-booking-link {
+        min-height: 24px;
+        padding: 3px 7px;
+        border-radius: 8px;
+        font-size: 10px;
+        line-height: 1;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .result-actions {
+        grid-column: auto;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="./chat.css?v=6">
+  <link rel="stylesheet" href="./alerts.css?v=1">
+  <script defer src="./app-cache-guard.js?v=2"></script>
+</head>
+
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        
+      </div>
+
+      <div class="health-badge">
+        <span id="service-dot" class="health-dot"></span>
+        <span id="service-status">연결 확인 중</span>
+      </div>
+    </header>
+
+    <section id="live-panel" class="live-panel" aria-label="감시 상태">
+      <div class="live-head">
+        <div class="live-title">
+          <span class="live-pulse"></span>
+          <span>MONITOR</span>
+        </div>
+        <div id="live-state" class="live-state">
+          기준 데이터를 불러오는 중
+        </div>
+      </div>
+
+      <div class="live-meta">
+        <span>현재 <strong id="current-time">-</strong></span>
+        <span>·</span>
+        <span>마지막 조회 <strong id="last-check-time">-</strong></span>
+        <span>·</span>
+        <span>데이터 <strong id="data-age">-</strong></span>
+      </div>
+    </section>
+
+    <section id="summary" class="summary-grid" aria-label="감시 요약"></section>
+
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">극장별 감시 상태</h2>
+        <p class="section-hint">상태 정보는 5분마다 자동으로 갱신됩니다.</p>
+      </div>
+
+      <div id="content" class="loading">
+        상태 정보를 불러오는 중입니다.
+      </div>
+    </section>
+
+    <footer class="footer">
+      자동 예매, 좌석 선택, 결제 기능은 수행하지 않습니다.<br>
+      GitHub Actions 스케줄은 서버 상황에 따라 지연될 수 있습니다.
+    </footer>
+  </main>
+
+  <div class="refresh-bar">
+    <div class="refresh-inner">
+      <button id="refresh-button" class="refresh-button" type="button">
+        <span class="refresh-icon">↻</span>
+        <span class="refresh-label">최신 상태 확인</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+    const RAW_STATUS_URL =
+      "https://raw.githubusercontent.com/" +
+      "LIM-AIT/cgv-api-watcher/main/docs/status.json";
+    const WARNING_DELAY_MS = 7 * 60 * 1000;
+    const ERROR_DELAY_MS = 12 * 60 * 1000;
+    const MANUAL_REFRESH_COOLDOWN_MS = 60 * 1000;
+
+    const STATUS_LABELS = {
+      OPEN: "예매 오픈",
+      WAIT: "IMAX 미오픈",
+      ERROR: "조회 오류",
+      NO_SCHEDULE: "영화 일정 없음",
+    };
+
+    const STATUS_CLASSES = {
+      OPEN: "status-open",
+      WAIT: "status-wait",
+      ERROR: "status-error",
+      NO_SCHEDULE: "status-idle",
+    };
+
+    let isLoading = false;
+    let lastCheckedAt = null;
+    let latestCheckedAtValue = null;
+    let liveTimer = null;
+    let autoRefreshTimer = null;
+    let staleRetryTimer = null;
+    let manualCooldownTimer = null;
+    let manualRefreshAllowedAt = 0;
+
+function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+
+      const [year, month, day] = value.split("-");
+      if (!year || !month || !day) return value;
+
+      const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+      const parsed = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+      const weekday = weekdays[parsed.getUTCDay()] || "";
+
+      return `${month}/${day} ${weekday}`;
+    }
+
+    function formatDateRange(from, to) {
+      return from && to
+        ? `${formatDate(from)} ~ ${formatDate(to)}`
+        : "-";
+    }
+
+    function parseCheckedAt(value) {
+      if (!value) return null;
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function formatClock(date) {
+      if (!date) return "-";
+
+      return new Intl.DateTimeFormat("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).format(date);
+    }
+
+    function formatElapsed(milliseconds) {
+      const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+
+      return minutes > 0
+        ? `${minutes}분 ${String(seconds).padStart(2, "0")}초 전`
+        : `${seconds}초 전`;
+    }
+
+    function renderSummary(data) {
+      const summary = document.getElementById("summary");
+
+      summary.innerHTML = `
+        <article class="summary-card">
+          <div class="summary-label">감시 영화</div>
+          <div class="summary-value">
+            ${escapeHtml(data.movie_keyword || "-")}
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-label">감시 포맷</div>
+          <div class="summary-value">IMAX</div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-label">감시 기간</div>
+          <div class="summary-value">
+            ${escapeHtml(formatDateRange(data.date_from, data.date_to))}
+          </div>
+        </article>
+
+        <article class="summary-card">
+          <div class="summary-label">감시 극장</div>
+          <div class="summary-value">
+            ${Array.isArray(data.theaters) ? data.theaters.length : 0}개
+          </div>
+        </article>
+      `;
+    }
+
+    function buildDateBookingUrl(data, theater, result) {
+      if (result?.booking_url) return result.booking_url;
+
+      const movieNo = data?.movie_keyword === "오디세이" ? "30001323" : "";
+      if (!movieNo || !theater?.site_no || !result?.date) {
+        return theater?.booking_url || "#";
+      }
+
+      const bookingParams = new URLSearchParams({
+        movNo: movieNo,
+        scnYmd: String(result.date).replaceAll("-", ""),
+        siteNm: `CGV ${theater.name}`,
+        siteNo: String(theater.site_no),
+      });
+
+      return `https://cgv.co.kr/cnm/movieBook/movie?${bookingParams.toString()}`;
+    }
+
+    function renderResult(result, theater, data) {
+      const status = result.status || "NO_SCHEDULE";
+      const statusClass = STATUS_CLASSES[status] || "status-idle";
+      const statusLabel = STATUS_LABELS[status] || status;
+      const isOpen = result.imax_open || status === "OPEN";
+
+      const movieName = result.movie_name
+        ? `<div class="movie-name">${escapeHtml(result.movie_name)}</div>`
+        : "";
+
+      const errorMessage = result.error
+        ? `<div class="error-message">${escapeHtml(result.error)}</div>`
+        : "";
+
+      const bookingAction = isOpen
+        ? `
+          <a
+            class="result-booking-link"
+            href="${escapeHtml(buildDateBookingUrl(data, theater, result))}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="${escapeHtml(formatDate(result.date))} 오디세이 IMAX 예매"
+          >예매 ↗</a>
+        `
+        : "";
+
+      return `
+        <div class="result-row">
+          <div class="result-date">${escapeHtml(formatDate(result.date))}</div>
+
+          <div class="result-main">
+            <div class="status-line ${statusClass}">
+              <span class="status-dot"></span>
+              <span class="status-label">${escapeHtml(statusLabel)}</span>
+            </div>
+            ${movieName}
+            ${errorMessage}
+          </div>
+
+          <div class="result-actions">
+            ${bookingAction}
+          </div>
+        </div>
+      `;
+    }
+    function renderTheaters(data) {
+      const content = document.getElementById("content");
+      const theaters = Array.isArray(data.theaters) ? data.theaters : [];
+
+      if (!theaters.length) {
+        content.className = "empty";
+        content.textContent = "설정된 극장이 없습니다.";
+        return;
+      }
+
+      content.className = "theater-list";
+      content.innerHTML = theaters.map((theater) => {
+        const results = Array.isArray(theater.results) ? theater.results : [];
+        const rows = results.length
+          ? results.map((result) => renderResult(result, theater, data)).join("")
+          : `
+            <div class="result-row">
+              <div class="result-main">
+                <div class="status-line status-idle">
+                  <span class="status-dot"></span>
+                  <span class="status-label">표시할 결과가 없습니다.</span>
+                </div>
+              </div>
+            </div>
+          `;
+
+        return `
+          <article class="theater-card">
+            <div class="theater-header">
+              <h3 class="theater-name">${escapeHtml(theater.name)}</h3>
+              <div class="theater-code">
+                Theater Code: ${escapeHtml(theater.site_no)}
+              </div>
+            </div>
+
+            <div class="result-list">${rows}</div>
+
+            <div class="booking-wrap">
+              <a
+                class="booking-link"
+                href="${escapeHtml(theater.booking_url)}"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                CGV 전체 예매 페이지
+              </a>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function updateServiceStatus(data) {
+      const label = document.getElementById("service-status");
+      const dot = document.getElementById("service-dot");
+      const badge = label?.parentElement;
+
+      if (!label || !dot) return;
+
+      dot.classList.remove("opening-pulse");
+      badge?.classList.remove("booking-open");
+
+      if (badge) {
+        badge.style.borderColor = "rgba(63, 185, 80, 0.34)";
+        badge.style.background = "rgba(63, 185, 80, 0.08)";
+      }
+
+      if (data.status === "OPEN") {
+        label.textContent = "예매 오픈 감지";
+        dot.style.background = "var(--open)";
+        dot.classList.add("opening-pulse");
+        badge?.classList.add("booking-open");
+        return;
+      }
+
+      if (data.status === "DEGRADED") {
+        label.textContent = "일부 조회 오류";
+        dot.style.background = "var(--error)";
+        if (badge) {
+          badge.style.borderColor = "rgba(248, 81, 73, 0.34)";
+          badge.style.background = "rgba(248, 81, 73, 0.08)";
+        }
+        return;
+      }
+
+      label.textContent = "정상 감시 중";
+      dot.style.background = "var(--open)";
+    }
+
+    function getManualCooldownRemaining() {
+      return Math.max(
+        0,
+        manualRefreshAllowedAt - Date.now(),
+      );
+    }
+
+    function updateRefreshButton(loading = isLoading) {
+      const button = document.getElementById("refresh-button");
+      const label = button.querySelector(".refresh-label");
+      const cooldownRemaining = getManualCooldownRemaining();
+
+      button.disabled =
+        loading || cooldownRemaining > 0;
+
+      button.classList.toggle(
+        "loading-state",
+        loading,
+      );
+
+      if (loading) {
+        label.textContent = "불러오는 중";
+        return;
+      }
+
+      if (cooldownRemaining > 0) {
+        const seconds =
+          Math.ceil(cooldownRemaining / 1000);
+
+        label.textContent =
+          `다시 확인 가능 ${seconds}초`;
+        return;
+      }
+
+      label.textContent = "최신 상태 확인";
+    }
+
+    function startManualRefreshCooldown() {
+      manualRefreshAllowedAt =
+        Date.now() + MANUAL_REFRESH_COOLDOWN_MS;
+
+      if (manualCooldownTimer) {
+        clearInterval(manualCooldownTimer);
+      }
+
+      updateRefreshButton();
+
+      manualCooldownTimer = setInterval(() => {
+        updateRefreshButton();
+
+        if (getManualCooldownRemaining() <= 0) {
+          clearInterval(manualCooldownTimer);
+          manualCooldownTimer = null;
+          updateRefreshButton();
+        }
+      }, 1000);
+    }
+
+    function flashLivePanel() {
+      const panel = document.getElementById("live-panel");
+      panel.classList.remove("updated");
+      requestAnimationFrame(() => panel.classList.add("updated"));
+    }
+
+    function scheduleAlignedAutoRefresh() {
+      if (autoRefreshTimer) {
+        clearTimeout(autoRefreshTimer);
+      }
+
+      const baseTime = lastCheckedAt
+        ? lastCheckedAt.getTime()
+        : Date.now();
+
+      let nextRunAt =
+        baseTime + CHECK_INTERVAL_MS + 20000;
+
+      while (nextRunAt <= Date.now()) {
+        nextRunAt += CHECK_INTERVAL_MS;
+      }
+
+      autoRefreshTimer = setTimeout(
+        async () => {
+          const previousCheckedAt =
+            latestCheckedAtValue;
+
+          await loadStatus();
+
+          if (
+            previousCheckedAt &&
+            latestCheckedAtValue === previousCheckedAt
+          ) {
+            if (staleRetryTimer) {
+              clearTimeout(staleRetryTimer);
+            }
+
+            staleRetryTimer = setTimeout(
+              async () => {
+                await loadStatus();
+              },
+              20000,
+            );
+          }
+        },
+        Math.max(1000, nextRunAt - Date.now()),
+      );
+    }
+
+    function setLiveReference(checkedAtValue) {
+      const parsed = parseCheckedAt(checkedAtValue);
+
+      if (!parsed) {
+        lastCheckedAt = null;
+        latestCheckedAtValue = null;
+        updateLiveMonitor();
+        return;
+      }
+
+      const hasNewResult =
+        latestCheckedAtValue !== null &&
+        latestCheckedAtValue !== checkedAtValue;
+
+      lastCheckedAt = parsed;
+      latestCheckedAtValue = checkedAtValue;
+
+      if (hasNewResult) {
+        flashLivePanel();
+      }
+
+      updateLiveMonitor();
+      scheduleAlignedAutoRefresh();
+    }
+
+    function getElapsed() {
+      return lastCheckedAt
+        ? Math.max(
+            0,
+            Date.now() - lastCheckedAt.getTime(),
+          )
+        : Number.POSITIVE_INFINITY;
+    }
+
+    function updateLiveMonitor() {
+      const now = new Date();
+      const currentTime =
+        document.getElementById("current-time");
+      const lastCheck =
+        document.getElementById("last-check-time");
+      const dataAge =
+        document.getElementById("data-age");
+      const state =
+        document.getElementById("live-state");
+
+      currentTime.textContent = formatClock(now);
+
+      if (!lastCheckedAt) {
+        lastCheck.textContent = "-";
+        dataAge.textContent = "-";
+        dataAge.classList.remove(
+          "warning",
+          "error",
+        );
+        state.textContent = "기준 데이터 없음";
+        document.title = "CGV WATCHER";
+        return;
+      }
+
+      const elapsed = getElapsed();
+
+      lastCheck.textContent =
+        formatClock(lastCheckedAt);
+
+      dataAge.textContent =
+        formatElapsed(elapsed);
+
+      dataAge.classList.toggle(
+        "warning",
+        elapsed >= WARNING_DELAY_MS &&
+          elapsed < ERROR_DELAY_MS,
+      );
+
+      dataAge.classList.toggle(
+        "error",
+        elapsed >= ERROR_DELAY_MS,
+      );
+
+      if (elapsed >= ERROR_DELAY_MS) {
+        state.textContent =
+          "감시 상태 확인 필요";
+        document.title =
+          "상태 확인 필요 | CGV WATCHER";
+        return;
+      }
+
+      if (elapsed >= WARNING_DELAY_MS) {
+        state.textContent =
+          "감시 결과 갱신 지연";
+        document.title =
+          "갱신 지연 | CGV WATCHER";
+        return;
+      }
+
+      state.textContent =
+          "정상 감시 중";
+
+      document.title =
+          "CGV WATCHER";
+    }
+
+    async function loadStatus() {
+      if (isLoading) return;
+
+      isLoading = true;
+      updateRefreshButton(true);
+
+      try {
+        const statusUrls = [
+          `./status.json?timestamp=${Date.now()}`,
+          `${RAW_STATUS_URL}?timestamp=${Date.now()}`,
+        ];
+
+        let data = null;
+        let lastError = null;
+
+        for (const url of statusUrls) {
+          try {
+            const response = await fetch(url, { cache: "no-store" });
+            if (!response.ok) {
+              lastError = new Error(`HTTP ${response.status}`);
+              continue;
+            }
+
+            data = await response.json();
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+
+        if (!data) {
+          throw lastError || new Error("상태 데이터 요청 실패");
+        }
+
+        renderSummary(data);
+        renderTheaters(data);
+        updateServiceStatus(data);
+        setLiveReference(data.checked_at);
+      } catch (error) {
+        const content = document.getElementById("content");
+        const status = document.getElementById("service-status");
+        const dot = document.getElementById("service-dot");
+
+        content.className = "fatal-error";
+        content.textContent =
+          `상태 정보를 불러오지 못했습니다: ${error.message}`;
+
+        status.textContent = "데이터 오류";
+        dot.style.background = "var(--error)";
+      } finally {
+        isLoading = false;
+        updateRefreshButton(false);
+      }
+    }
+
+    document
+      .getElementById("refresh-button")
+      .addEventListener("click", async () => {
+        if (
+          isLoading ||
+          getManualCooldownRemaining() > 0
+        ) {
+          return;
+        }
+
+        startManualRefreshCooldown();
+        await loadStatus();
+      });
+
+    liveTimer = setInterval(
+      updateLiveMonitor,
+      1000,
+    );
+
+    // Check the latest GitHub status every 150 seconds.
+    setInterval(() => {
+      if (!document.hidden) {
+        loadStatus();
+      }
+    }, 150000);
+
+    loadStatus();
+  </script>
+
+  <script id="status-badge-header-move-v2">
+    (() => {
+      const statusLabel =
+        document.getElementById("service-status");
+      const header =
+        document.querySelector("header");
+
+      if (!statusLabel || !header) {
+        console.warn(
+          "Status badge or header was not found.",
+        );
+        return;
+      }
+
+      const badge = statusLabel.parentElement;
+
+      if (!badge) {
+        console.warn(
+          "Status badge container was not found.",
+        );
+        return;
+      }
+
+      badge.classList.add(
+        "header-status-badge",
+      );
+
+      header.appendChild(badge);
+    })();
+  </script>
+
+
+  <script id="reaction-game-script-v1">
+    (() => {
+      const STORAGE_KEY = "cgv-reaction-ranking-v1";
+      const NAME_KEY = "cgv-reaction-player-name-v1";
+
+      const ko = {
+        title: "\u26a1 IMAX \ubc18\uc751\uc18d\ub3c4 \ud14c\uc2a4\ud2b8",
+        description:
+          "\uc608\ub9e4 \uc624\ud508 \uc2e0\ud638\uac00 \ub098\uc624\uba74 \uc989\uc2dc \ud130\uce58\ud558\uc138\uc694.",
+        placeholder: "\uc774\ub984 \uc785\ub825",
+        start: "\ud14c\uc2a4\ud2b8 \uc2dc\uc791",
+        idleMain: "\uc2dc\uc791 \ubc84\ud2bc\uc744 \ub20c\ub7ec\uc8fc\uc138\uc694",
+        idleSub: "\uc2e0\ud638\uac00 \ub098\uc624\uae30 \uc804\uc5d0 \ub204\ub974\uba74 \uc2e4\ud328\uc785\ub2c8\ub2e4.",
+        waitingMain: "\uc608\ub9e4 \uc624\ud508 \ub300\uae30 \uc911...",
+        waitingSub: "\uc544\uc9c1 \ub204\ub974\uc9c0 \ub9c8\uc138\uc694.",
+        readyMain: "\uc608\ub9e4 \uc624\ud508!",
+        readySub: "\uc9c0\uae08 \ud130\uce58!",
+        failedMain: "\ub108\ubb34 \ube68\ub790\uc2b5\ub2c8\ub2e4!",
+        failedSub: "\uc2e0\ud638\uac00 \ub098\uc628 \ub4a4 \ub204\ub974\uc138\uc694.",
+        nameRequired: "\uc774\ub984\uc744 \uba3c\uc800 \uc785\ub825\ud574\uc8fc\uc138\uc694.",
+        ranking: "TOP 5",
+        empty: "\uc544\uc9c1 \uae30\ub85d\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
+        note:
+          "\uac8c\uc784\uc6a9 \ud654\uba74\uc774\uba70 \uc2e4\uc81c CGV \uc608\ub9e4 \uc0c1\ud0dc\uc640 \ubb34\uad00\ud569\ub2c8\ub2e4.",
+      };
+
+      let state = "idle";
+      let timerId = null;
+      let readyAt = 0;
+
+      function escapeGameHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function loadRanking() {
+        try {
+          const data = JSON.parse(
+            localStorage.getItem(STORAGE_KEY) || "[]",
+          );
+
+          return Array.isArray(data)
+            ? data
+                .filter(
+                  (item) =>
+                    item &&
+                    typeof item.name === "string" &&
+                    Number.isFinite(Number(item.time)),
+                )
+                .map((item) => ({
+                  name: item.name.slice(0, 12),
+                  time: Number(item.time),
+                }))
+                .sort((a, b) => a.time - b.time)
+                .slice(0, 5)
+            : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function saveRanking(ranking) {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(ranking.slice(0, 5)),
+        );
+      }
+
+      function renderRanking() {
+        const list = document.getElementById(
+          "reaction-ranking-list",
+        );
+
+        if (!list) return;
+
+        const ranking = loadRanking();
+
+        if (!ranking.length) {
+          list.innerHTML =
+            `<li class="reaction-ranking-empty">${ko.empty}</li>`;
+          return;
+        }
+
+        list.innerHTML = ranking
+          .map(
+            (item, index) => `
+              <li class="reaction-ranking-item">
+                <span class="reaction-ranking-number">
+                  ${index + 1}
+                </span>
+                <span class="reaction-ranking-name">
+                  ${escapeGameHtml(item.name)}
+                </span>
+                <span class="reaction-ranking-time">
+                  ${item.time}ms
+                </span>
+              </li>
+            `,
+          )
+          .join("");
+      }
+
+      function setTarget(mode, main, sub) {
+        const target = document.getElementById(
+          "reaction-target",
+        );
+
+        if (!target) return;
+
+        target.className = `reaction-target ${mode}`;
+        target.innerHTML = `
+          <span>
+            <span class="reaction-target-main">
+              ${main}
+            </span>
+            <span class="reaction-target-sub">
+              ${sub}
+            </span>
+          </span>
+        `;
+      }
+
+      function resetGame() {
+        clearTimeout(timerId);
+        timerId = null;
+        readyAt = 0;
+        state = "idle";
+
+        const startButton = document.getElementById(
+          "reaction-start-button",
+        );
+
+        if (startButton) {
+          startButton.disabled = false;
+          startButton.textContent = ko.start;
+        }
+      }
+
+      function addScore(name, time) {
+        const ranking = loadRanking();
+
+        ranking.push({
+          name: name.slice(0, 12),
+          time,
+        });
+
+        ranking.sort((a, b) => a.time - b.time);
+
+        saveRanking(ranking.slice(0, 5));
+        renderRanking();
+      }
+
+      function startGame() {
+        const nameInput = document.getElementById(
+          "reaction-name-input",
+        );
+        const startButton = document.getElementById(
+          "reaction-start-button",
+        );
+
+        const name = nameInput
+          ? nameInput.value.trim()
+          : "";
+
+        if (!name) {
+          setTarget(
+            "failed",
+            ko.nameRequired,
+            ko.idleSub,
+          );
+
+          nameInput?.focus();
+          return;
+        }
+
+        localStorage.setItem(NAME_KEY, name.slice(0, 12));
+
+        clearTimeout(timerId);
+        state = "waiting";
+        readyAt = 0;
+
+        if (startButton) {
+          startButton.disabled = true;
+        }
+
+        setTarget(
+          "waiting",
+          ko.waitingMain,
+          ko.waitingSub,
+        );
+
+        const delay =
+          1200 + Math.floor(Math.random() * 2801);
+
+        timerId = window.setTimeout(() => {
+          state = "ready";
+          readyAt = performance.now();
+
+          setTarget(
+            "ready",
+            ko.readyMain,
+            ko.readySub,
+          );
+        }, delay);
+      }
+
+      function handleTargetPress() {
+        if (state === "waiting") {
+          clearTimeout(timerId);
+
+          setTarget(
+            "failed",
+            ko.failedMain,
+            ko.failedSub,
+          );
+
+          resetGame();
+          return;
+        }
+
+        if (state !== "ready") return;
+
+        const reactionTime = Math.max(
+          1,
+          Math.round(performance.now() - readyAt),
+        );
+
+        const name =
+          document
+            .getElementById("reaction-name-input")
+            ?.value.trim() || "\uc775\uba85";
+
+        addScore(name, reactionTime);
+
+        setTarget(
+          "result",
+          `${reactionTime}ms`,
+          "\uae30\ub85d\uc774 TOP 5\uc5d0 \ubc18\uc601\ub418\uc5c8\uc2b5\ub2c8\ub2e4.",
+        );
+
+        resetGame();
+      }
+
+      function createGame() {
+        if (document.getElementById("reaction-game")) {
+          return;
+        }
+
+        const game = document.createElement("section");
+        game.id = "reaction-game";
+        game.className = "reaction-game";
+
+        game.innerHTML = `
+          <div class="reaction-game-header">
+            <div>
+              <h2 class="reaction-game-title">
+                ${ko.title}
+              </h2>
+              <p class="reaction-game-description">
+                ${ko.description}
+              </p>
+            </div>
+          </div>
+
+          <div class="reaction-game-grid">
+            <div class="reaction-play-panel">
+              <div class="reaction-name-row">
+                <input
+                  id="reaction-name-input"
+                  class="reaction-name-input"
+                  type="text"
+                  maxlength="12"
+                  autocomplete="nickname"
+                  placeholder="${ko.placeholder}"
+                >
+
+                <button
+                  id="reaction-start-button"
+                  class="reaction-start-button"
+                  type="button"
+                >
+                  ${ko.start}
+                </button>
+              </div>
+
+              <button
+                id="reaction-target"
+                class="reaction-target"
+                type="button"
+              >
+                <span>
+                  <span class="reaction-target-main">
+                    ${ko.idleMain}
+                  </span>
+                  <span class="reaction-target-sub">
+                    ${ko.idleSub}
+                  </span>
+                </span>
+              </button>
+            </div>
+
+            <div class="reaction-ranking-panel">
+              <h3 class="reaction-ranking-title">
+                ${ko.ranking}
+              </h3>
+
+              <ol
+                id="reaction-ranking-list"
+                class="reaction-ranking-list"
+              ></ol>
+            </div>
+          </div>
+
+          <p class="reaction-game-note">
+            ${ko.note}
+          </p>
+        `;
+
+        const refreshButton =
+          document.getElementById("refresh-button");
+
+        const refreshContainer =
+          refreshButton?.parentElement;
+
+        const disclaimer =
+          document.querySelector(
+            ".disclaimer, footer, .notice",
+          );
+
+        if (
+          refreshContainer &&
+          refreshContainer.parentElement
+        ) {
+          refreshContainer.parentElement.insertBefore(
+            game,
+            refreshContainer,
+          );
+        } else if (
+          disclaimer &&
+          disclaimer.parentElement
+        ) {
+          disclaimer.insertAdjacentElement(
+            "afterend",
+            game,
+          );
+        } else {
+          document.body.appendChild(game);
+        }
+
+        const savedName =
+          localStorage.getItem(NAME_KEY);
+
+        if (savedName) {
+          document.getElementById(
+            "reaction-name-input",
+          ).value = savedName;
+        }
+
+        document
+          .getElementById("reaction-start-button")
+          .addEventListener("click", startGame);
+
+        document
+          .getElementById("reaction-target")
+          .addEventListener(
+            "click",
+            handleTargetPress,
+          );
+
+        renderRanking();
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          createGame,
+          { once: true },
+        );
+      } else {
+        createGame();
+      }
+    })();
+  </script>
+
+
+  <script id="move-refresh-button-to-theater-title-v1">
+    (() => {
+      function moveRefreshButton() {
+        const button =
+          document.getElementById("refresh-button");
+
+        if (!button) return;
+
+        const headings = Array.from(
+          document.querySelectorAll("h1, h2, h3, .section-title"),
+        );
+
+        const title = headings.find((element) =>
+          element.textContent
+            .replace(/\s+/g, " ")
+            .trim()
+            .includes("\uadf9\uc7a5\ubcc4 \uac10\uc2dc \uc0c1\ud0dc"),
+        );
+
+        if (!title) {
+          console.warn("Theater section title was not found.");
+          return;
+        }
+
+        let headingRow = title.parentElement;
+
+        if (
+          !headingRow ||
+          !headingRow.classList.contains(
+            "theater-section-heading",
+          )
+        ) {
+          headingRow = document.createElement("div");
+          headingRow.className = "theater-section-heading";
+
+          title.parentElement.insertBefore(
+            headingRow,
+            title,
+          );
+
+          headingRow.appendChild(title);
+        }
+
+        const oldContainer = button.parentElement;
+
+        headingRow.appendChild(button);
+
+        if (
+          oldContainer &&
+          oldContainer !== headingRow &&
+          oldContainer.children.length === 0
+        ) {
+          oldContainer.classList.add(
+            "empty-refresh-container",
+          );
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          moveRefreshButton,
+          { once: true },
+        );
+      } else {
+        moveRefreshButton();
+      }
+    })();
+  </script>
+
+
+  <script id="reaction-game-final-position-v2">
+    (() => {
+      const GAME_TITLE =
+        "\u26a1 \ubc18\uc751\uc18d\ub3c4 \ud14c\uc2a4\ud2b8 \ud83d\udc31";
+
+      function arrangeReactionGame() {
+        const game =
+          document.getElementById("reaction-game");
+
+        const theaterList =
+          document.getElementById("content");
+
+        if (!game || !theaterList) {
+          return false;
+        }
+
+        const title =
+          game.querySelector(".reaction-game-title");
+
+        if (title) {
+          title.textContent = GAME_TITLE;
+        }
+
+        theaterList.insertAdjacentElement(
+          "afterend",
+          game,
+        );
+
+        return true;
+      }
+
+      function initialize() {
+        if (arrangeReactionGame()) return;
+
+        let attempts = 0;
+
+        const timer = window.setInterval(() => {
+          attempts += 1;
+
+          if (
+            arrangeReactionGame() ||
+            attempts >= 20
+          ) {
+            window.clearInterval(timer);
+          }
+        }, 100);
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          initialize,
+          { once: true },
+        );
+      } else {
+        initialize();
+      }
+    })();
+  </script>
+
+
+  <script id="developer-label-v1">
+    (() => {
+      function updateDeveloperLabel() {
+        const subtitle =
+          document.querySelector("header .brand p");
+
+        if (!subtitle) return;
+
+        subtitle.textContent = "Developed & Maintained by Woosang Lim";
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          updateDeveloperLabel,
+          { once: true },
+        );
+      } else {
+        updateDeveloperLabel();
+      }
+    })();
+  </script>
+
+
+  <script id="restore-complete-header-brand-v1">
+    (() => {
+      function restoreHeaderBrand() {
+        const header = document.querySelector("header");
+
+        if (!header) {
+          console.warn("Header element was not found.");
+          return;
+        }
+
+        let brand = header.querySelector(".brand");
+
+        if (!brand) {
+          brand = document.createElement("div");
+          brand.className = "brand";
+          header.prepend(brand);
+        }
+
+        brand.innerHTML = `
+          <div class="eyebrow">CLOUD MONITORING</div>
+          <h1>CGV WATCHER</h1>
+          <p class="developer-credit">
+            Developed & Maintained by Woosang Lim
+          </p>
+        `;
+
+        const statusLabel =
+          document.getElementById("service-status");
+
+        const badge = statusLabel?.parentElement;
+
+        if (badge && badge.parentElement !== header) {
+          header.appendChild(badge);
+        }
+
+        if (badge) {
+          badge.classList.add("header-status-badge");
+        }
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener(
+          "DOMContentLoaded",
+          restoreHeaderBrand,
+          { once: true },
+        );
+      } else {
+        restoreHeaderBrand();
+      }
+    })();
+  </script>
+
+  <script type="module" src="./chat.js?v=6"></script>
+  <script type="module" src="./alerts.js?v=4"></script>
+  <script src="./alerts-verified-ui.js?v=2"></script>
+  <script type="module" src="./alert-count.js?v=2"></script>
+  <script src="./layout-order.js?v=9"></script>
+  <script src="./refresh-icon-ui.js?v=2"></script>
+  <script src="./header-instagram.js?v=3"></script>
+</body>
+</html>
