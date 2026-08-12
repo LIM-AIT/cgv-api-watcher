@@ -56,7 +56,7 @@ function buildChat() {
   section.innerHTML = `
     <div class="imax-chat-head">
       <div>
-        <h2>💬 IMAX 실시간 채팅</h2>
+        <h2>💬 꿀좌석 선점을 위한 실시간 채팅</h2>
         <p>예매 오픈 정보와 현황을 실시간으로 공유하세요.</p>
       </div>
       <div class="imax-chat-head-actions">
