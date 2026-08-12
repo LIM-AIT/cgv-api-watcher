@@ -1,6 +1,8 @@
-import("./chat-identity-guard.js?v=1").catch((error) => {
-  console.error("Chat identity guard failed to load", error);
-});
+import("./chat-content-filter.js?v=1")
+  .then(() => import("./chat-identity-guard.js?v=2"))
+  .catch((error) => {
+    console.error("Chat guard modules failed to load", error);
+  });
 
 (() => {
   const STYLE_ID = "header-instagram-style-v2";
