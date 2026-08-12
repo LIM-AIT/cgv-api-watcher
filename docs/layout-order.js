@@ -1,6 +1,10 @@
 (() => {
   const RETRY_DELAYS = [0, 100, 300, 700, 1500, 3000, 6000];
   const DEFAULT_VISIBLE_MMDD = 902;
+  const TARGET_VISIBLE_MMDD = {
+    odyssey_imax: 902,
+    spiderman_screenx: 827,
+  };
   const DATE_MORE_STYLE_ID = "date-more-toggle-style-v1";
   const REACTION_LEADERBOARD_ASSET_ID = "reaction-leaderboard-asset-v1";
   const MOVIE_SWITCHER_ASSET_ID = "movie-switcher-asset-v1";
@@ -139,8 +143,17 @@
     return match ? match[1] : String(label || "").trim();
   }
 
+  function visibleCutoffMmdd() {
+    const targetKey =
+      window.CGV_WATCHER_TARGET ||
+      localStorage.getItem("cgv-watcher-selected-target-v1") ||
+      "odyssey_imax";
+    return TARGET_VISIBLE_MMDD[targetKey] ?? DEFAULT_VISIBLE_MMDD;
+  }
+
   function applyDateMoreToggles() {
     ensureDateMoreStyles();
+    const cutoffMmdd = visibleCutoffMmdd();
 
     document.querySelectorAll(".theater-card .result-list").forEach((list) => {
       const rows = Array.from(list.children).filter((node) =>
@@ -148,9 +161,9 @@
       );
       if (!rows.length) return;
 
-      const signature = rows
+      const signature = `${cutoffMmdd}|${rows
         .map((row) => row.querySelector(".result-date")?.textContent?.trim() || "")
-        .join("|");
+        .join("|")}`;
       if (list.dataset.dateMoreSignature === signature) return;
       list.dataset.dateMoreSignature = signature;
 
@@ -163,7 +176,7 @@
       const extraRows = rows.filter((row) => {
         const label = row.querySelector(".result-date")?.textContent;
         const mmdd = dateLabelToMmdd(label);
-        return mmdd !== null && mmdd > DEFAULT_VISIBLE_MMDD;
+        return mmdd !== null && mmdd > cutoffMmdd;
       });
 
       if (!extraRows.length) return;
@@ -258,6 +271,10 @@
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
+  });
+
+  document.addEventListener("cgv:movie-target-changed", () => {
+    window.requestAnimationFrame(refreshTheaterUi);
   });
 
   RETRY_DELAYS.forEach((delay) => {
