@@ -7,6 +7,7 @@ const NICKNAME_KEY = "cgv-chat-nickname";
 const ADMIN_NICKNAME = "관리자";
 const RESERVED_NICKNAME_PARTS = ["관리자", "운영자", "개발자", "임우상", "우상"];
 const SEND_COOLDOWN_MS = 2000;
+const ADMIN_VISUAL_STYLE_ID = "imax-chat-admin-visual-style-v1";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const originalPrompt = window.prompt.bind(window);
@@ -32,6 +33,10 @@ function isReservedNickname(value) {
   return RESERVED_NICKNAME_PARTS.some((part) => key.includes(part));
 }
 
+function isOfficialAdminNickname(value) {
+  return nicknameKey(value) === nicknameKey(ADMIN_NICKNAME);
+}
+
 function getNameInput() {
   return document.getElementById("imax-chat-name");
 }
@@ -50,6 +55,132 @@ function isCurrentAdminMode() {
 
 function dispatchChatRefresh() {
   document.dispatchEvent(new Event("visibilitychange"));
+}
+
+function ensureAdminVisualStyles() {
+  if (document.getElementById(ADMIN_VISUAL_STYLE_ID)) return;
+
+  const style = document.createElement("style");
+  style.id = ADMIN_VISUAL_STYLE_ID;
+  style.textContent = `
+    .imax-chat-item.imax-chat-official-admin {
+      border: 1px solid rgba(248, 81, 73, 0.34);
+      background: rgba(248, 81, 73, 0.09);
+      box-shadow: inset 3px 0 0 rgba(248, 81, 73, 0.88);
+    }
+
+    .imax-chat-item.imax-chat-official-admin:hover {
+      background: rgba(248, 81, 73, 0.13);
+    }
+
+    .imax-chat-item.imax-chat-official-admin .imax-chat-meta strong {
+      color: #ff7b72;
+      font-weight: 900;
+    }
+
+    .imax-chat-item.imax-chat-official-admin .imax-chat-text {
+      color: #ffd2ce;
+      font-weight: 700;
+    }
+
+    .imax-chat-admin-badge {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 6px;
+      border: 1px solid rgba(255, 123, 114, 0.56);
+      border-radius: 999px;
+      background: rgba(218, 54, 51, 0.2);
+      color: #ffb4ad !important;
+      font-size: 8px !important;
+      font-weight: 900;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .imax-chat-presence-user.imax-chat-official-admin-presence {
+      background: rgba(248, 81, 73, 0.07);
+    }
+
+    .imax-chat-presence-user.imax-chat-official-admin-presence .imax-chat-online-dot {
+      background: #f85149;
+      box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.12);
+    }
+
+    .imax-chat-presence-user.imax-chat-official-admin-presence .imax-chat-presence-name {
+      color: #ff8f87;
+      font-weight: 900;
+    }
+
+    .imax-chat-presence-admin-badge {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 6px;
+      border: 1px solid rgba(248, 81, 73, 0.5);
+      border-radius: 999px;
+      background: #da3633;
+      color: #fff;
+      font-size: 8px;
+      font-weight: 900;
+      line-height: 1.2;
+      white-space: nowrap;
+      box-shadow: 0 0 0 2px rgba(218, 54, 51, 0.08);
+    }
+
+    @media (max-width: 640px) {
+      .imax-chat-admin-badge,
+      .imax-chat-presence-admin-badge {
+        padding: 2px 5px;
+        font-size: 7px !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function decorateAdminVisuals() {
+  ensureAdminVisualStyles();
+
+  document.querySelectorAll("#imax-chat-list .imax-chat-item").forEach((item) => {
+    const meta = item.querySelector(".imax-chat-meta");
+    const name = meta?.querySelector("strong");
+    const isAdmin = isOfficialAdminNickname(name?.textContent);
+
+    item.classList.toggle("imax-chat-official-admin", isAdmin);
+
+    let badge = meta?.querySelector(".imax-chat-admin-badge");
+    if (isAdmin && meta && name && !badge) {
+      badge = document.createElement("span");
+      badge.className = "imax-chat-admin-badge";
+      badge.textContent = "관리자";
+      badge.title = "공식 관리자 메시지";
+      name.insertAdjacentElement("afterend", badge);
+    } else if (!isAdmin && badge) {
+      badge.remove();
+    }
+  });
+
+  document.querySelectorAll("#imax-chat-presence-list .imax-chat-presence-user").forEach((item) => {
+    const name = item.querySelector(".imax-chat-presence-name");
+    const isAdmin = isOfficialAdminNickname(name?.textContent);
+
+    item.classList.toggle("imax-chat-official-admin-presence", isAdmin);
+
+    let badge = item.querySelector(".imax-chat-presence-admin-badge");
+    if (isAdmin && name && !badge) {
+      badge = document.createElement("span");
+      badge.className = "imax-chat-presence-admin-badge";
+      badge.textContent = "관리자";
+      badge.title = "공식 관리자";
+      name.insertAdjacentElement("afterend", badge);
+    } else if (!isAdmin && badge) {
+      badge.remove();
+    }
+  });
 }
 
 function sanitizeSavedNickname() {
@@ -159,13 +290,27 @@ function initializeNicknameGuard() {
   }
 
   syncAdminState();
+  decorateAdminVisuals();
 
   const section = document.getElementById("imax-live-chat");
   if (section) {
-    const observer = new MutationObserver(syncAdminState);
-    observer.observe(section, {
+    const adminStateObserver = new MutationObserver(syncAdminState);
+    adminStateObserver.observe(section, {
       attributes: true,
       attributeFilter: ["class"],
+    });
+
+    let visualRaf = null;
+    const visualObserver = new MutationObserver(() => {
+      if (visualRaf !== null) return;
+      visualRaf = requestAnimationFrame(() => {
+        visualRaf = null;
+        decorateAdminVisuals();
+      });
+    });
+    visualObserver.observe(section, {
+      childList: true,
+      subtree: true,
     });
   }
 }
