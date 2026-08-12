@@ -1,5 +1,6 @@
 import("./chat-content-filter.js?v=2")
   .then(() => import("./chat-identity-guard.js?v=5"))
+  .then(() => import("./chat-admin-minimal-style.js?v=1"))
   .catch((error) => {
     console.error("Chat guard modules failed to load", error);
   });
