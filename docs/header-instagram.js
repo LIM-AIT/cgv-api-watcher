@@ -1,61 +1,58 @@
 (() => {
-  const STYLE_ID = "header-instagram-style-v1";
+  const STYLE_ID = "header-instagram-style-v2";
   const LINK_CLASS = "developer-instagram-link";
   const INSTAGRAM_URL = "https://www.instagram.com/limxsang/";
 
   function ensureStyles() {
     if (document.getElementById(STYLE_ID)) return;
 
+    const oldStyle = document.getElementById("header-instagram-style-v1");
+    if (oldStyle) oldStyle.remove();
+
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
       header .developer-credit .${LINK_CLASS} {
         display: inline-flex !important;
-        width: 15px !important;
-        height: 15px !important;
-        margin-left: 6px !important;
+        width: 20px !important;
+        height: 20px !important;
+        margin-left: 7px !important;
         align-items: center !important;
         justify-content: center !important;
-        vertical-align: -3px !important;
-        color: var(--muted) !important;
+        vertical-align: -5px !important;
         text-decoration: none !important;
-        opacity: 0.9;
-        transition: opacity 140ms ease, transform 140ms ease, color 140ms ease;
+        opacity: 1;
+        transition: transform 140ms ease, filter 140ms ease;
       }
 
       header .developer-credit .${LINK_CLASS}:hover {
-        color: var(--text) !important;
-        opacity: 1;
-        transform: translateY(-1px);
+        transform: translateY(-1px) scale(1.08);
+        filter: brightness(1.12) saturate(1.1);
       }
 
       header .developer-credit .${LINK_CLASS}:focus-visible {
-        outline: 2px solid #60a5fa;
+        outline: 2px solid #e1306c;
         outline-offset: 3px;
-        border-radius: 4px;
+        border-radius: 5px;
       }
 
       header .developer-credit .${LINK_CLASS} svg {
         display: block;
-        width: 15px;
-        height: 15px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.9;
-        stroke-linecap: round;
-        stroke-linejoin: round;
+        width: 20px;
+        height: 20px;
+        overflow: visible;
       }
 
       @media (max-width: 640px) {
         header .developer-credit .${LINK_CLASS},
         header .developer-credit .${LINK_CLASS} svg {
-          width: 14px !important;
-          height: 14px !important;
+          width: 18px !important;
+          height: 18px !important;
         }
 
         header .developer-credit .${LINK_CLASS} {
-          margin-left: 5px !important;
-          vertical-align: -3px !important;
+          margin-left: 6px !important;
+          vertical-align: -5px !important;
         }
       }
     `;
@@ -67,7 +64,9 @@
 
     const credit = document.querySelector("header .developer-credit");
     if (!credit) return false;
-    if (credit.querySelector(`.${LINK_CLASS}`)) return true;
+
+    const existing = credit.querySelector(`.${LINK_CLASS}`);
+    if (existing) existing.remove();
 
     const link = document.createElement("a");
     link.className = LINK_CLASS;
@@ -78,9 +77,18 @@
     link.setAttribute("title", "Instagram @limxsang");
     link.innerHTML = `
       <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3" y="3" width="18" height="18" rx="5"></rect>
-        <circle cx="12" cy="12" r="4.25"></circle>
-        <circle cx="17.4" cy="6.6" r="0.9" fill="currentColor" stroke="none"></circle>
+        <defs>
+          <linearGradient id="instagram-gradient" x1="3" y1="21" x2="21" y2="3" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#feda75"></stop>
+            <stop offset="28%" stop-color="#fa7e1e"></stop>
+            <stop offset="52%" stop-color="#d62976"></stop>
+            <stop offset="75%" stop-color="#962fbf"></stop>
+            <stop offset="100%" stop-color="#4f5bd5"></stop>
+          </linearGradient>
+        </defs>
+        <rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="url(#instagram-gradient)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"></rect>
+        <circle cx="12" cy="12" r="4.25" fill="none" stroke="url(#instagram-gradient)" stroke-width="2.15"></circle>
+        <circle cx="17.4" cy="6.6" r="1.15" fill="url(#instagram-gradient)"></circle>
       </svg>
     `;
 
