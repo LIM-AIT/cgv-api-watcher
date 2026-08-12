@@ -1,5 +1,5 @@
 (() => {
-  const STYLE_ID = "refresh-icon-ui-style-v1";
+  const STYLE_ID = "refresh-icon-ui-style-v2";
   const RETRY_DELAYS = [0, 100, 300, 700, 1500, 3000];
 
   function ensureStyles() {
@@ -26,7 +26,14 @@
       #refresh-button.refresh-icon-only .refresh-icon {
         margin: 0 !important;
         font-size: 14px !important;
+        font-weight: 900 !important;
         line-height: 1 !important;
+        font-variant-numeric: tabular-nums;
+      }
+
+      #refresh-button.refresh-icon-only.cooldown-counting .refresh-icon {
+        font-size: 12px !important;
+        letter-spacing: -0.02em;
       }
 
       @media (max-width: 640px) {
@@ -36,6 +43,10 @@
 
         #refresh-button.refresh-icon-only .refresh-icon {
           font-size: 14px !important;
+        }
+
+        #refresh-button.refresh-icon-only.cooldown-counting .refresh-icon {
+          font-size: 12px !important;
         }
       }
     `;
@@ -51,9 +62,33 @@
     );
     if (!button || !spiderButton) return false;
 
+    const label = button.querySelector(".refresh-label");
+    const icon = button.querySelector(".refresh-icon");
+    const labelText = label?.textContent?.trim() || "";
+    const cooldownMatch = labelText.match(/다시 확인 가능\s*(\d+)초/);
+    const isLoading = button.classList.contains("loading-state");
+
     button.classList.add("refresh-icon-only");
-    button.setAttribute("aria-label", "최신 상태 확인");
-    button.setAttribute("title", "최신 상태 확인");
+
+    if (cooldownMatch && !isLoading) {
+      const seconds = cooldownMatch[1];
+      button.classList.add("cooldown-counting");
+      button.setAttribute("aria-label", `${seconds}초 후 다시 확인 가능`);
+      button.setAttribute("title", `${seconds}초 후 다시 확인 가능`);
+      if (icon && icon.textContent !== seconds) {
+        icon.textContent = seconds;
+      }
+    } else {
+      button.classList.remove("cooldown-counting");
+      const accessibleLabel = isLoading
+        ? "최신 상태 불러오는 중"
+        : "최신 상태 확인";
+      button.setAttribute("aria-label", accessibleLabel);
+      button.setAttribute("title", accessibleLabel);
+      if (icon && icon.textContent !== "↻") {
+        icon.textContent = "↻";
+      }
+    }
 
     const rect = spiderButton.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
@@ -90,6 +125,8 @@
       childList: true,
       subtree: true,
       characterData: true,
+      attributes: true,
+      attributeFilter: ["class", "disabled"],
     });
 
     document.addEventListener("cgv:movie-target-changed", scheduleSync);
