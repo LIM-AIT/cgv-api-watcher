@@ -29,4 +29,5 @@ jobs:
       - name: Validate targeted mailer without sending mail
         env:
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          PYTHONPATH: "."
         run: python .github/scripts/dry_run_target_mailer.py
