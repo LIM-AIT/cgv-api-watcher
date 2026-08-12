@@ -5,7 +5,7 @@ const SUPABASE_KEY = "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC";
 const ADMIN_SEND_RPC = "send_cgv_chat_admin_message";
 const NICKNAME_KEY = "cgv-chat-nickname";
 const ADMIN_NICKNAME = "관리자";
-const RESERVED_NICKNAMES = new Set(["관리자", "임우상", "우상"]);
+const RESERVED_NICKNAME_PARTS = ["관리자", "운영자", "개발자", "임우상", "우상"];
 const SEND_COOLDOWN_MS = 2000;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -22,12 +22,14 @@ function normalizeNickname(value) {
 
 function nicknameKey(value) {
   return normalizeNickname(value)
-    .replace(/\s+/g, "")
-    .toLocaleLowerCase("ko-KR");
+    .toLocaleLowerCase("ko-KR")
+    .replace(/[^0-9a-z가-힣ㄱ-ㅎㅏ-ㅣ]+/g, "");
 }
 
 function isReservedNickname(value) {
-  return RESERVED_NICKNAMES.has(nicknameKey(value));
+  const key = nicknameKey(value);
+  if (!key) return false;
+  return RESERVED_NICKNAME_PARTS.some((part) => key.includes(part));
 }
 
 function getNameInput() {
@@ -250,7 +252,7 @@ document.addEventListener(
     if (isReservedNickname(nickname)) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      alert("이 닉네임은 사용할 수 없습니다.");
+      alert("관리자·운영자·개발자 등 보호된 표현이 포함된 닉네임은 사용할 수 없습니다.");
       nameInput?.focus();
       nameInput?.select();
       return;
