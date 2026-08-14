@@ -1,0 +1,45 @@
+name: One-time run email registration patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/once-run-email-registration-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Recover and run patch script
+        run: |
+          python -c "import re,base64,pathlib; src=pathlib.Path('.github/workflows/once-add-multiple-email-registration.yml').read_text(); b64=re.search(r\"printf '%s' '([^']+)' \\| base64 -d\",src).group(1); code=base64.b64decode(b64).decode(); code=code.replace('raise SystemExit(f\"{[abel}: expected 1 match, got {count}\")','raise SystemExit(label + \": expected 1 match, got \" + str(count))'); pathlib.Path('/tmp/patch.py').write_text(code)"
+          python /tmp/patch.py
+          node --check docs/alerts.js
+          grep -q 'alerts.js?v=6' docs/app.html
+          grep -q 'imax-email-alert-additional-button' docs/alerts.js
+          grep -q 'SUBSCRIPTIONS_STORAGE_KEY' docs/alerts.js
+
+      - name: Commit and clean temporary workflows
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add docs/alerts.js docs/app.html
+          git commit -m "Add additional email alert registration"
+          git push
+
+          git pull --rebase origin main
+          rm -f .github/workflows/once-add-multiple-email-registration.yml
+          rm -f .github/workflows/once-run-email-registration-patch.yml
+          git add -A
+          git commit -m "Remove temporary email registration workflows [skip ci]"
+          git push
