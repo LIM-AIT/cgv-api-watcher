@@ -192,12 +192,14 @@ function setPanelCopy() {
   const panel = document.getElementById("imax-email-alert");
   if (!panel) return;
   const title = panel.querySelector(".imax-email-alert-copy h2");
-  const description = panel.querySelector(".imax-email-alert-copy p");
+  const description = panel.querySelector(".imax-email-alert-description");
+  const confirmation = panel.querySelector(".imax-email-alert-confirmation");
   const consentText = panel.querySelector(".imax-email-alert-consent span");
   if (title) title.textContent = info.title;
-  if (description) {
-    description.textContent =
-      `${info.description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.`;
+  if (description) description.textContent = info.description;
+  if (confirmation) {
+    confirmation.textContent =
+      "등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.";
   }
   if (consentText) consentText.textContent = info.consent;
 }
@@ -333,7 +335,10 @@ function buildAlertPanel() {
     <div class="imax-email-alert-copy">
       <div class="imax-email-alert-kicker">EMAIL ALERT</div>
       <h2>${targetInfo().title}</h2>
-      <p>${targetInfo().description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</p>
+      <p>
+        <span class="imax-email-alert-description">${targetInfo().description}</span>
+        <span class="imax-email-alert-confirmation">등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</span>
+      </p>
     </div>
 
     <form id="imax-email-alert-form" class="imax-email-alert-form">

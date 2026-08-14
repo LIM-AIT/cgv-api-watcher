@@ -367,3 +367,9 @@
   }
 }
 
+.imax-email-alert-confirmation {
+  display: block;
+  margin-top: 2px;
+  color: #e3b341;
+  font-weight: 800;
+}
