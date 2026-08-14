@@ -306,3 +306,64 @@
     margin-top: 0;
   }
 }
+
+/* Desktop: verified email + add-target state. Keep all controls in the right column. */
+@media (min-width: 701px) {
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) .imax-email-alert-form {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) .imax-email-alert-input {
+    width: 100%;
+    padding: 0 8px;
+    border-color: rgba(63, 185, 80, 0.42);
+    background: rgba(63, 185, 80, 0.08);
+    color: #7ee787;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 800;
+    opacity: 1;
+    cursor: default;
+  }
+
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) .imax-email-alert-input::placeholder {
+    color: #7ee787;
+    opacity: 1;
+  }
+
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) .imax-email-alert-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) .imax-email-alert-consent {
+    grid-column: 2;
+    grid-row: 2;
+    margin-top: -4px;
+  }
+
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) .imax-email-alert-status {
+    display: none;
+  }
+
+  .imax-email-alert:has(.imax-email-alert-form[data-mode="add"]) #imax-email-alert-additional-button {
+    grid-column: 2;
+    grid-row: 3;
+    justify-self: end;
+    width: calc(50% - 4px) !important;
+    height: 40px;
+    margin: 0 !important;
+    padding: 0 10px !important;
+    border-color: rgba(88, 166, 255, 0.30) !important;
+    background: rgba(88, 166, 255, 0.06) !important;
+    color: #a5d6ff !important;
+    font-size: 11px !important;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+}
+

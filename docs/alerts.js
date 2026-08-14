@@ -244,8 +244,10 @@ function configureForm(mode) {
   const input = document.getElementById("imax-email-alert-input");
   const consent = document.getElementById("imax-email-alert-consent");
   const button = document.getElementById("imax-email-alert-button");
+  const form = document.getElementById("imax-email-alert-form");
   if (!input || !consent || !button) return;
 
+  if (form) form.dataset.mode = mode;
   input.required = mode === "new";
   input.disabled = mode !== "new";
   consent.disabled = mode === "subscribed" || mode === "pending";
@@ -256,7 +258,7 @@ function configureForm(mode) {
     button.textContent = "알림 등록";
   } else if (mode === "add") {
     input.value = "";
-    input.placeholder = "인증된 이메일로 추가";
+    input.placeholder = "✅ 이메일 인증 완료";
     button.textContent = `${targetInfo().format} 알림 추가`;
   } else if (mode === "subscribed") {
     input.value = "";
