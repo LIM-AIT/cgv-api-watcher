@@ -9,7 +9,8 @@
     "https://raw.githubusercontent.com/LIM-AIT/cgv-api-watcher/main/docs/status.json";
 
   let latestData = null;
-  let selectedTarget = localStorage.getItem(STORAGE_KEY) || DEFAULT_TARGET;
+  let selectedTarget = DEFAULT_TARGET;
+  localStorage.setItem(STORAGE_KEY, DEFAULT_TARGET);
 
   function escapeHtml(value) {
     return String(value ?? "")

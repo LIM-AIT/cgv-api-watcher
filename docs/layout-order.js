@@ -24,7 +24,7 @@
   );
   ensureModuleAsset(
     MOVIE_SWITCHER_ASSET_ID,
-    "./movie-switcher.js?v=1",
+    "./movie-switcher.js?v=2",
   );
 
   function placeInteractiveSections() {
