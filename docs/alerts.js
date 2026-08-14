@@ -403,7 +403,7 @@ async function registerAlert(event) {
     consent.checked = false;
     configureForm("pending");
     setAlertStatus(
-      `등록 요청 완료 · ${targetInfo().label} 확인 메일은 보통 1분 이내 도착합니다. 메일의 확인 링크를 눌러주세요.`,
+      `등록 요청 완료 · ${targetInfo().label} 확인 또는 알림 관리 메일은 보통 1분 이내 도착합니다. 이미 등록된 이메일은 중복 생성하지 않습니다. 메일의 링크를 눌러주세요.`,
       "success",
     );
   } catch (error) {
@@ -442,6 +442,7 @@ function removeActionParams() {
   url.searchParams.delete("email_verify");
   url.searchParams.delete("email_unsubscribe");
   url.searchParams.delete("email_unsubscribe_target");
+  url.searchParams.delete("email_manage_target");
   history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -451,6 +452,9 @@ async function handleEmailActions() {
   const unsubscribes = parseActionValues(params.get("email_unsubscribe"));
   const targetUnsubscribe = parseTargetActionValue(
     params.get("email_unsubscribe_target"),
+  );
+  const manageTarget = parseTargetActionValue(
+    params.get("email_manage_target"),
   );
 
   if (verify) {
@@ -465,6 +469,31 @@ async function handleEmailActions() {
         : false;
 
     if (!error && (data === true || alreadyVerified)) {
+      let completedLabel = "이메일 알림";
+      if (
+        manageTarget &&
+        manageTarget.id === verify.id &&
+        manageTarget.token === verify.token
+      ) {
+        const targetResult = await supabase.rpc(
+          "add_cgv_email_subscription_target",
+          {
+            p_id: manageTarget.id,
+            p_token: manageTarget.token,
+            p_target_key: manageTarget.targetKey,
+          },
+        );
+        if (targetResult.error || targetResult.data !== true) {
+          setAlertStatus(
+            "이메일 인증은 완료됐지만 알림 추가에 실패했습니다. 잠시 후 다시 시도해주세요.",
+            "error",
+          );
+          removeActionParams();
+          return;
+        }
+        completedLabel = TARGETS[manageTarget.targetKey].label;
+      }
+
       const saved = readSavedSubscription();
       saveSubscription({
         ...(saved?.id === verify.id ? saved : {}),
@@ -472,9 +501,39 @@ async function handleEmailActions() {
         token: verify.token,
         verified: true,
       });
-      setAlertStatus("✅ 이메일 알림 등록 완료", "success");
+      setAlertStatus(`✅ ${completedLabel} 등록 완료`, "success");
     } else {
       setAlertStatus("확인 링크가 유효하지 않거나 이미 처리된 요청입니다.", "error");
+    }
+    removeActionParams();
+    return;
+  }
+
+  if (manageTarget) {
+    const info = TARGETS[manageTarget.targetKey];
+    setAlertStatus(`${info.label} 알림을 확인하고 있습니다.`, "pending");
+    const { data, error } = await supabase.rpc(
+      "add_cgv_email_subscription_target",
+      {
+        p_id: manageTarget.id,
+        p_token: manageTarget.token,
+        p_target_key: manageTarget.targetKey,
+      },
+    );
+    if (!error && data === true) {
+      saveSubscription({
+        id: manageTarget.id,
+        token: manageTarget.token,
+        verified: true,
+        targetKey: manageTarget.targetKey,
+        registeredAt: new Date().toISOString(),
+      });
+      setAlertStatus(`✅ ${info.label} 이메일 알림 등록 완료`, "success");
+    } else {
+      setAlertStatus(
+        "알림 관리 링크가 유효하지 않거나 처리할 수 없습니다.",
+        "error",
+      );
     }
     removeActionParams();
     return;
