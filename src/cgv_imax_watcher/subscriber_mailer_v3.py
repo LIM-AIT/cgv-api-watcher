@@ -19,11 +19,8 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 DEFAULT_SUPABASE_URL = "https://yxrfarlhcyaaslwmdyww.supabase.co"
-DEFAULT_SUPABASE_ANON_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4cmZhcmxoY3lhYXNsd21keXd3Iiw"
-    "icm9sZSI6ImFub24iLCJpYXQiOjE3NzE5OTk2NDksImV4cCI6MjA4NzU3NTY0OX0."
-    "z7_2YgAz2HetxJ2dYV54WfLM_3TQMe8YtH1oq_p-k-Q"
+DEFAULT_SUPABASE_PUBLISHABLE_KEY = (
+    "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC"
 )
 DEFAULT_STATUS_URL = (
     "https://raw.githubusercontent.com/LIM-AIT/cgv-api-watcher/"
@@ -112,17 +109,23 @@ def decrypt_subscription(private_key, ciphertext: str) -> tuple[str, str]:
 
 def supabase_session() -> tuple[requests.Session, str]:
     base_url = env("SUPABASE_URL", DEFAULT_SUPABASE_URL).rstrip("/")
-    key = env("SUPABASE_ANON_KEY", DEFAULT_SUPABASE_ANON_KEY)
-    session = requests.Session()
-    session.headers.update(
-        {
-            "apikey": key,
-            "Authorization": f"Bearer {key}",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": "cgv-api-watcher-subscriber-mailer/3.0",
-        }
+    key = (
+        env("SUPABASE_PUBLISHABLE_KEY")
+        or env("SUPABASE_ANON_KEY")
+        or DEFAULT_SUPABASE_PUBLISHABLE_KEY
     )
+    session = requests.Session()
+    headers = {
+        "apikey": key,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "cgv-api-watcher-subscriber-mailer/3.1",
+    }
+    # Legacy anon keys are JWTs and may be used as Bearer tokens.
+    # New sb_publishable keys must be sent as API keys, not JWTs.
+    if key.startswith("eyJ"):
+        headers["Authorization"] = f"Bearer {key}"
+    session.headers.update(headers)
     return session, base_url
 
 
