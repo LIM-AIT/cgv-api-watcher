@@ -8,9 +8,14 @@
   const RAW_STATUS_URL =
     "https://raw.githubusercontent.com/LIM-AIT/cgv-api-watcher/main/docs/status.json";
 
-  let latestData = null;
-  let selectedTarget = DEFAULT_TARGET;
-  localStorage.setItem(STORAGE_KEY, DEFAULT_TARGET);
+  if (window.__CGV_MOVIE_SWITCHER_INITIALIZED__) return;
+window.__CGV_MOVIE_SWITCHER_INITIALIZED__ = true;
+
+let latestData = null;
+let selectedTarget =
+  TARGET_LABELS[window.CGV_WATCHER_TARGET]
+    ? window.CGV_WATCHER_TARGET
+    : DEFAULT_TARGET;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -280,6 +285,7 @@
   function selectMovie(targetKey) {
     if (!TARGET_LABELS[targetKey] || targetKey === selectedTarget) return;
     selectedTarget = targetKey;
+    window.CGV_WATCHER_TARGET = selectedTarget;
     localStorage.setItem(STORAGE_KEY, selectedTarget);
     updateSelectorState();
     renderSelected();

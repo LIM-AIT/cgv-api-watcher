@@ -8,6 +8,13 @@
   const DATE_MORE_STYLE_ID = "date-more-toggle-style-v1";
   const REACTION_LEADERBOARD_ASSET_ID = "reaction-leaderboard-asset-v1";
   const MOVIE_SWITCHER_ASSET_ID = "movie-switcher-asset-v1";
+const MOVIE_SELECTION_STORAGE_KEY = "cgv-watcher-selected-target-v1";
+const DEFAULT_MOVIE_TARGET = "odyssey_imax";
+
+// A new page always starts on Odyssey. After initialization, the
+// movie switcher owns the target state for the lifetime of the page.
+window.CGV_WATCHER_TARGET = DEFAULT_MOVIE_TARGET;
+localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
 
   function ensureModuleAsset(id, src) {
     if (document.getElementById(id)) return;
@@ -24,7 +31,7 @@
   );
   ensureModuleAsset(
     MOVIE_SWITCHER_ASSET_ID,
-    "./movie-switcher.js?v=2",
+    "./movie-switcher.js?v=3",
   );
 
   function placeInteractiveSections() {
