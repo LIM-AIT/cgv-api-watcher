@@ -4,6 +4,7 @@ const SUPABASE_URL = "https://yxrfarlhcyaaslwmdyww.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC";
 const STORAGE_KEY = "cgv-imax-email-alert-v1";
+const SUBSCRIPTIONS_STORAGE_KEY = "cgv-email-alert-subscriptions-v2";
 const MOVIE_STORAGE_KEY = "cgv-watcher-selected-target-v1";
 const MAX_EMAIL_LENGTH = 180;
 const DEFAULT_TARGET = "odyssey_imax";
@@ -34,6 +35,7 @@ let currentTargetKey =
   DEFAULT_TARGET;
 let savedTargetStates = new Map();
 let savedParentStatus = null;
+let forceNewRegistration = false;
 
 function targetInfo() {
   return TARGETS[currentTargetKey] || TARGETS[DEFAULT_TARGET];
@@ -110,14 +112,69 @@ function readSavedSubscription() {
   }
 }
 
+function readSavedSubscriptions() {
+  const current = readSavedSubscription();
+  let values = [];
+  try {
+    const raw = localStorage.getItem(SUBSCRIPTIONS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    values = Array.isArray(parsed)
+      ? parsed.filter((item) => item?.id && item?.token)
+      : [];
+  } catch {
+    values = [];
+  }
+
+  if (
+    current?.id &&
+    current?.token &&
+    !values.some((item) => item.id === current.id)
+  ) {
+    values.push(current);
+  }
+  return values;
+}
+
+function persistSavedSubscriptions(values) {
+  localStorage.setItem(
+    SUBSCRIPTIONS_STORAGE_KEY,
+    JSON.stringify(values.filter((item) => item?.id && item?.token)),
+  );
+}
+
+function rememberSubscription(value) {
+  if (!value?.id || !value?.token) return;
+  const values = readSavedSubscriptions().filter(
+    (item) => item.id !== value.id,
+  );
+  values.push(value);
+  persistSavedSubscriptions(values);
+}
+
 function saveSubscription(value) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  rememberSubscription(value);
 }
 
 function clearSavedSubscription(id) {
-  const saved = readSavedSubscription();
-  if (!id || saved?.id === id) {
-    localStorage.removeItem(STORAGE_KEY);
+  const current = readSavedSubscription();
+  let values = readSavedSubscriptions();
+
+  if (id) {
+    values = values.filter((item) => item.id !== id);
+    persistSavedSubscriptions(values);
+  } else {
+    values = [];
+    localStorage.removeItem(SUBSCRIPTIONS_STORAGE_KEY);
+  }
+
+  if (!id || current?.id === id) {
+    const replacement = values.at(-1) || null;
+    if (replacement) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(replacement));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
     savedTargetStates = new Map();
     savedParentStatus = null;
   }
@@ -143,6 +200,44 @@ function setPanelCopy() {
       `${info.description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.`;
   }
   if (consentText) consentText.textContent = info.consent;
+}
+
+function updateAdditionalEmailButton() {
+  const button = document.getElementById(
+    "imax-email-alert-additional-button",
+  );
+  if (!button) return;
+  const saved = readSavedSubscription();
+  button.hidden = !(saved?.id && saved?.token);
+  button.textContent = forceNewRegistration
+    ? "추가 등록 취소"
+    : "+ 다른 이메일 등록";
+}
+
+function toggleAdditionalEmailRegistration() {
+  const saved = readSavedSubscription();
+  if (!saved?.id || !saved?.token) return;
+
+  rememberSubscription(saved);
+  forceNewRegistration = !forceNewRegistration;
+
+  if (forceNewRegistration) {
+    const input = document.getElementById("imax-email-alert-input");
+    const consent = document.getElementById(
+      "imax-email-alert-consent",
+    );
+    configureForm("new");
+    if (input) input.value = "";
+    if (consent) consent.checked = false;
+    setAlertStatus(
+      `기존 이메일 구독은 그대로 유지됩니다. 새 이메일로 ${targetInfo().label} 알림을 추가 등록할 수 있습니다.`,
+      "info",
+    );
+    input?.focus();
+    return;
+  }
+
+  refreshPanelState();
 }
 
 function configureForm(mode) {
@@ -174,11 +269,20 @@ function configureForm(mode) {
     button.textContent = "인증 대기";
     consent.checked = false;
   }
+  updateAdditionalEmailButton();
 }
 
 function refreshPanelState() {
   setPanelCopy();
   const saved = readSavedSubscription();
+  if (forceNewRegistration && saved?.id && saved?.token) {
+    configureForm("new");
+    setAlertStatus(
+      `기존 이메일 구독은 그대로 유지됩니다. 새 이메일로 ${targetInfo().label} 알림을 추가 등록할 수 있습니다.`,
+      "info",
+    );
+    return;
+  }
   if (!saved?.id || !saved?.token) {
     configureForm("new");
     setAlertStatus(
@@ -251,6 +355,13 @@ function buildAlertPanel() {
     <div id="imax-email-alert-status" class="imax-email-alert-status" data-type="info">
       이메일 주소는 브라우저에서 암호화한 뒤 저장되며, 확인 전에는 오픈 알림이 발송되지 않습니다.
     </div>
+
+    <button
+      id="imax-email-alert-additional-button"
+      type="button"
+      hidden
+      style="width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:800;cursor:pointer;"
+    >+ 다른 이메일 등록</button>
   `;
 
   const summary = document.getElementById("summary");
@@ -350,7 +461,7 @@ async function registerAlert(event) {
   if (!input || !consent || !button) return;
 
   const saved = readSavedSubscription();
-  if (saved?.id && saved?.token && savedParentStatus === "verified") {
+  if (!forceNewRegistration && saved?.id && saved?.token && savedParentStatus === "verified") {
     try {
       button.disabled = true;
       await addCurrentTarget(saved);
@@ -390,6 +501,9 @@ async function registerAlert(event) {
     );
     if (error || data !== true) throw error || new Error("Registration failed");
 
+    if (saved?.id && saved?.token) {
+      rememberSubscription(saved);
+    }
     saveSubscription({
       id,
       token,
@@ -397,6 +511,7 @@ async function registerAlert(event) {
       targetKey: currentTargetKey,
       registeredAt: new Date().toISOString(),
     });
+    forceNewRegistration = false;
     savedParentStatus = "pending";
     savedTargetStates = new Map([[currentTargetKey, true]]);
     input.value = "";
@@ -599,6 +714,9 @@ async function init() {
   document
     .getElementById("imax-email-alert-form")
     ?.addEventListener("submit", registerAlert);
+  document
+    .getElementById("imax-email-alert-additional-button")
+    ?.addEventListener("click", toggleAdditionalEmailRegistration);
   document.addEventListener("cgv:movie-target-changed", (event) => {
     handleTargetChanged(event).catch((error) =>
       console.warn("Email target switch sync failed", error),
