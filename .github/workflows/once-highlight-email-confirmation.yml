@@ -24,6 +24,7 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           from pathlib import Path
+          import re
 
           js_path = Path('docs/alerts.js')
           css_path = Path('docs/alerts.css')
@@ -33,46 +34,44 @@ jobs:
           css = css_path.read_text(encoding='utf-8')
           app = app_path.read_text(encoding='utf-8')
 
-          query_old = '  const description = panel.querySelector(".imax-email-alert-copy p");'
-          query_new = '''  const description = panel.querySelector(".imax-email-alert-description");
-          const confirmation = panel.querySelector(".imax-email-alert-confirmation");'''
-          if query_old not in js:
+          js, count = re.subn(
+              r'(?m)^\s*const description = panel\.querySelector\("\.imax-email-alert-copy p"\);$',
+              '  const description = panel.querySelector(".imax-email-alert-description");\n  const confirmation = panel.querySelector(".imax-email-alert-confirmation");',
+              js,
+              count=1,
+          )
+          if count != 1:
               raise SystemExit('description query anchor not found')
-          js = js.replace(query_old, query_new, 1)
 
-          copy_old = '''  if (description) {
-            description.textContent =
-              `${info.description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.`;
-          }'''
-          copy_new = '''  if (description) description.textContent = info.description;
-          if (confirmation) {
-            confirmation.textContent =
-              "등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.";
-          }'''
-          if copy_old not in js:
+          js, count = re.subn(
+              r'(?ms)^\s*if \(description\) \{\s*description\.textContent =\s*`\$\{info\.description\} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요\.`;\s*\}',
+              '  if (description) description.textContent = info.description;\n  if (confirmation) {\n    confirmation.textContent =\n      "등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.";\n  }',
+              js,
+              count=1,
+          )
+          if count != 1:
               raise SystemExit('description copy anchor not found')
-          js = js.replace(copy_old, copy_new, 1)
 
-          markup_old = '      <p>${targetInfo().description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</p>'
-          markup_new = '''      <p>
-                <span class="imax-email-alert-description">${targetInfo().description}</span>
-                <span class="imax-email-alert-confirmation">등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</span>
-              </p>'''
-          if markup_old not in js:
+          js, count = re.subn(
+              r'(?m)^\s*<p>\$\{targetInfo\(\)\.description\} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요\.</p>$',
+              '      <p>\n        <span class="imax-email-alert-description">${targetInfo().description}</span>\n        <span class="imax-email-alert-confirmation">등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</span>\n      </p>',
+              js,
+              count=1,
+          )
+          if count != 1:
               raise SystemExit('alert panel markup anchor not found')
-          js = js.replace(markup_old, markup_new, 1)
 
           if '.imax-email-alert-confirmation {' in css:
               raise SystemExit('confirmation CSS already present')
           css = css.rstrip() + '''
 
-          .imax-email-alert-confirmation {
-            display: block;
-            margin-top: 2px;
-            color: #e3b341;
-            font-weight: 800;
-          }
-          '''
+.imax-email-alert-confirmation {
+  display: block;
+  margin-top: 2px;
+  color: #e3b341;
+  font-weight: 800;
+}
+'''
 
           if './alerts.css?v=3' not in app:
               raise SystemExit('alerts.css v3 reference not found')
