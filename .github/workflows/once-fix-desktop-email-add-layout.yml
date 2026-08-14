@@ -33,19 +33,23 @@ jobs:
           css = css_path.read_text(encoding='utf-8')
           app = app_path.read_text(encoding='utf-8')
 
-          old = '''  const button = document.getElementById("imax-email-alert-button");
-          if (!input || !consent || !button) return;
+          button_line = '  const button = document.getElementById("imax-email-alert-button");\n'
+          if button_line not in js:
+              raise SystemExit('button anchor not found')
+          js = js.replace(
+              button_line,
+              button_line + '  const form = document.getElementById("imax-email-alert-form");\n',
+              1,
+          )
 
-          input.required = mode === "new";'''
-          new = '''  const button = document.getElementById("imax-email-alert-button");
-          const form = document.getElementById("imax-email-alert-form");
-          if (!input || !consent || !button) return;
-
-          if (form) form.dataset.mode = mode;
-          input.required = mode === "new";'''
-          if old not in js:
-              raise SystemExit('configureForm anchor not found')
-          js = js.replace(old, new, 1)
+          required_line = '  input.required = mode === "new";\n'
+          if required_line not in js:
+              raise SystemExit('required anchor not found')
+          js = js.replace(
+              required_line,
+              '  if (form) form.dataset.mode = mode;\n' + required_line,
+              1,
+          )
 
           old_placeholder = '    input.placeholder = "인증된 이메일로 추가";'
           new_placeholder = '    input.placeholder = "✅ 이메일 인증 완료";'
