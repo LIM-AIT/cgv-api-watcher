@@ -1,8 +1,8 @@
 {
   "service": "CGV WATCHER",
   "status": "OPEN",
-  "checked_at": "2026-08-14T17:28:39+09:00",
-  "checked_at_display": "2026-08-14 17:28:39 KST",
+  "checked_at": "2026-08-14T17:31:10+09:00",
+  "checked_at_display": "2026-08-14 17:31:10 KST",
   "default_target": "odyssey_imax",
   "movie_keyword": "오디세이",
   "display_name": "The Odyssey",
@@ -788,7 +788,7 @@
       "format": "SCREENX",
       "date_from": "2026-08-19",
       "date_to": "2026-09-07",
-      "status": "RUNNING",
+      "status": "OPEN",
       "theaters": [
         {
           "name": "용산아이파크몰",
@@ -1064,29 +1064,29 @@
           "results": [
             {
               "date": "2026-08-19",
-              "movie_found": false,
-              "format_open": false,
-              "format_count": 0,
-              "movie_name": "",
+              "movie_found": true,
+              "format_open": true,
+              "format_count": 4,
+              "movie_name": "스파이더맨-브랜드 뉴 데이",
               "format_name": "SCREENX",
               "error": "",
-              "status": "NO_SCHEDULE",
-              "booking_url": "",
-              "imax_open": false,
-              "imax_count": 0
+              "status": "OPEN",
+              "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001192&scnSseq=1&scnYmd=20260819&scnsNo=010&siteNm=CGV+%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
+              "imax_open": true,
+              "imax_count": 4
             },
             {
               "date": "2026-08-20",
-              "movie_found": false,
-              "format_open": false,
-              "format_count": 0,
-              "movie_name": "",
+              "movie_found": true,
+              "format_open": true,
+              "format_count": 6,
+              "movie_name": "스파이더맨-브랜드 뉴 데이",
               "format_name": "SCREENX",
               "error": "",
-              "status": "NO_SCHEDULE",
-              "booking_url": "",
-              "imax_open": false,
-              "imax_count": 0
+              "status": "OPEN",
+              "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001192&scnSseq=1&scnYmd=20260820&scnsNo=010&siteNm=CGV+%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
+              "imax_open": true,
+              "imax_count": 6
             },
             {
               "date": "2026-08-21",
