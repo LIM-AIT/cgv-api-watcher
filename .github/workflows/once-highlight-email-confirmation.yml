@@ -33,49 +33,39 @@ jobs:
           css = css_path.read_text(encoding='utf-8')
           app = app_path.read_text(encoding='utf-8')
 
-          old_js = '''  const title = panel.querySelector(".imax-email-alert-copy h2");
-          const description = panel.querySelector(".imax-email-alert-copy p");
-          const consentText = panel.querySelector(".imax-email-alert-consent span");
-          if (title) title.textContent = info.title;
-          if (description) {
+          query_old = '  const description = panel.querySelector(".imax-email-alert-copy p");'
+          query_new = '''  const description = panel.querySelector(".imax-email-alert-description");
+          const confirmation = panel.querySelector(".imax-email-alert-confirmation");'''
+          if query_old not in js:
+              raise SystemExit('description query anchor not found')
+          js = js.replace(query_old, query_new, 1)
+
+          copy_old = '''  if (description) {
             description.textContent =
               `${info.description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.`;
-          }
-          if (consentText) consentText.textContent = info.consent;'''
-          new_js = '''  const title = panel.querySelector(".imax-email-alert-copy h2");
-          const description = panel.querySelector(".imax-email-alert-description");
-          const confirmation = panel.querySelector(".imax-email-alert-confirmation");
-          const consentText = panel.querySelector(".imax-email-alert-consent span");
-          if (title) title.textContent = info.title;
-          if (description) description.textContent = info.description;
+          }'''
+          copy_new = '''  if (description) description.textContent = info.description;
           if (confirmation) {
             confirmation.textContent =
               "등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.";
-          }
-          if (consentText) consentText.textContent = info.consent;'''
-          if old_js not in js:
-              raise SystemExit('setPanelCopy anchor not found')
-          js = js.replace(old_js, new_js, 1)
+          }'''
+          if copy_old not in js:
+              raise SystemExit('description copy anchor not found')
+          js = js.replace(copy_old, copy_new, 1)
 
-          old_markup = '''      <h2>${targetInfo().title}</h2>
-                <p>${targetInfo().description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</p>'''
-          new_markup = '''      <h2>${targetInfo().title}</h2>
-                <p>
-                  <span class="imax-email-alert-description">${targetInfo().description}</span>
-                  <span class="imax-email-alert-confirmation">등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</span>
-                </p>'''
-          if old_markup not in js:
+          markup_old = '      <p>${targetInfo().description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</p>'
+          markup_new = '''      <p>
+                <span class="imax-email-alert-description">${targetInfo().description}</span>
+                <span class="imax-email-alert-confirmation">등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</span>
+              </p>'''
+          if markup_old not in js:
               raise SystemExit('alert panel markup anchor not found')
-          js = js.replace(old_markup, new_markup, 1)
+          js = js.replace(markup_old, markup_new, 1)
 
-          css_anchor = '''.imax-email-alert p {
-            margin: 7px 0 0;
-            color: var(--muted);
-            font-size: 11px;
-            line-height: 1.55;
-          }
-          '''
-          css_replacement = css_anchor + '''
+          if '.imax-email-alert-confirmation {' in css:
+              raise SystemExit('confirmation CSS already present')
+          css = css.rstrip() + '''
+
           .imax-email-alert-confirmation {
             display: block;
             margin-top: 2px;
@@ -83,11 +73,6 @@ jobs:
             font-weight: 800;
           }
           '''
-          if css_anchor not in css:
-              raise SystemExit('alert paragraph css anchor not found')
-          if '.imax-email-alert-confirmation {' in css:
-              raise SystemExit('confirmation CSS already present')
-          css = css.replace(css_anchor, css_replacement, 1)
 
           if './alerts.css?v=3' not in app:
               raise SystemExit('alerts.css v3 reference not found')
