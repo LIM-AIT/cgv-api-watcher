@@ -32,14 +32,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
+
           git add docs/alerts.js docs/app.html
           git commit -m "Add additional email alert registration"
+          git pull --rebase origin main
           git push
 
-          git pull --rebase origin main
           rm -f .github/workflows/once-add-multiple-email-registration.yml
           rm -f .github/workflows/once-run-email-registration-patch.yml
           git add -A
           git commit -m "Remove temporary email registration workflows [skip ci]"
+          git pull --rebase origin main
           git push
