@@ -1,0 +1,69 @@
+name: One-time email identity backfill check
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/once-email-identity-backfill-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Claim existing email identities
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          SUPABASE_URL: "https://yxrfarlhcyaaslwmdyww.supabase.co"
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          from src.cgv_imax_watcher import subscriber_mailer_targeted as targeted
+          from src.cgv_imax_watcher import subscriber_mailer_v3 as mailer
+
+          private_key = mailer.load_private_key(
+              Path('.github/secure/alert-private-key.enc.json'),
+              mailer.smtp_password(),
+          )
+          secret = targeted.load_mailer_secret(private_key)
+          session, base_url = mailer.supabase_session()
+          try:
+              rows = targeted.fetch_subscription_rows(session, base_url)
+              attempted = 0
+              accepted = 0
+              for row in rows:
+                  if bool(row.get('identity_claimed')):
+                      continue
+                  email, token = mailer.decrypt_subscription(
+                      private_key,
+                      str(row.get('email_ciphertext', '')),
+                  )
+                  attempted += 1
+                  canonical = targeted.claim_identity(
+                      session,
+                      base_url,
+                      secret,
+                      str(row.get('id', '')),
+                      token,
+                      email,
+                  )
+                  if canonical:
+                      accepted += 1
+              print(f'IDENTITY_CLAIMS_ATTEMPTED={attempted}')
+              print(f'IDENTITY_CLAIMS_ACCEPTED={accepted}')
+              if attempted != accepted:
+                  raise SystemExit('Not all identity claims were accepted')
+          finally:
+              session.close()
+          PY
