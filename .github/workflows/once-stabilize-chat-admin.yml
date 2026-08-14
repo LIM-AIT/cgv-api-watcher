@@ -1,0 +1,132 @@
+name: One-time chat admin stabilization
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/once-stabilize-chat-admin.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Stabilize chat guard initialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          chat_path = Path('docs/chat.js')
+          header_path = Path('docs/header-instagram.js')
+          app_path = Path('docs/app.html')
+
+          chat = chat_path.read_text(encoding='utf-8')
+          header = header_path.read_text(encoding='utf-8')
+          app = app_path.read_text(encoding='utf-8')
+
+          old_init = '''async function initChat() {
+            buildChat();
+            bindForm();
+            bindAdminControls();
+            bindPresenceControls();
+            bindConnectionRecovery();
+
+            subscribeRealtime();
+            await loadMessages(true);
+          }'''
+          new_init = '''async function loadChatGuardModules() {
+            try {
+              await import("./chat-content-filter.js?v=2");
+              await import("./chat-identity-guard.js?v=6");
+              await import("./chat-admin-minimal-style.js?v=1");
+              return true;
+            } catch (error) {
+              console.error("Chat guard modules failed to load", error);
+              return false;
+            }
+          }
+
+          async function initChat() {
+            buildChat();
+
+            const guardsReady = await loadChatGuardModules();
+
+            bindForm();
+            if (guardsReady) {
+              bindAdminControls();
+            } else {
+              const adminButton = document.getElementById("imax-chat-admin-button");
+              if (adminButton) {
+                adminButton.disabled = true;
+                adminButton.title = "관리자 모듈을 불러오지 못했습니다. 새로고침해주세요.";
+              }
+            }
+            bindPresenceControls();
+            bindConnectionRecovery();
+
+            subscribeRealtime();
+            await loadMessages(true);
+          }'''
+          if old_init not in chat:
+              raise SystemExit('chat init anchor not found')
+          chat = chat.replace(old_init, new_init, 1)
+
+          old_header = '''import("./chat-content-filter.js?v=2")
+            .then(() => import("./chat-identity-guard.js?v=5"))
+            .then(() => import("./chat-admin-minimal-style.js?v=1"))
+            .catch((error) => {
+              console.error("Chat guard modules failed to load", error);
+            });
+
+          '''
+          if old_header not in header:
+              raise SystemExit('header guard chain anchor not found')
+          header = header.replace(old_header, '', 1)
+
+          if './chat.js?v=6' not in app:
+              raise SystemExit('chat.js v6 reference not found')
+          if './header-instagram.js?v=3' not in app:
+              raise SystemExit('header-instagram v3 reference not found')
+          app = app.replace('./chat.js?v=6', './chat.js?v=7', 1)
+          app = app.replace('./header-instagram.js?v=3', './header-instagram.js?v=4', 1)
+
+          chat_path.write_text(chat, encoding='utf-8')
+          header_path.write_text(header, encoding='utf-8')
+          app_path.write_text(app, encoding='utf-8')
+          PY
+
+          node --check docs/chat.js
+          node --check docs/header-instagram.js
+          grep -q 'loadChatGuardModules' docs/chat.js
+          grep -q 'chat-identity-guard.js?v=6' docs/chat.js
+          ! grep -q 'chat-identity-guard.js?v=5' docs/header-instagram.js
+          grep -q 'chat.js?v=7' docs/app.html
+          grep -q 'header-instagram.js?v=4' docs/app.html
+
+      - name: Publish and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/chat.js docs/header-instagram.js docs/app.html
+          git commit -m "Stabilize chat admin initialization"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+          git pull --rebase origin main
+          rm -f .github/workflows/once-stabilize-chat-admin.yml
+          git add -A
+          git commit -m "Remove chat admin stabilization helper [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
