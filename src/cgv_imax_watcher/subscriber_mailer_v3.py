@@ -401,7 +401,7 @@ def event_booking_url(event: OpenEvent) -> str:
 def verification_url(subscription: Subscription) -> str:
     dashboard = env("DASHBOARD_URL", DEFAULT_DASHBOARD_URL).rstrip("/") + "/"
     value = f"{subscription.id}.{subscription.token}"
-    return f"{dashboard}?{urlencode({'email_verify': value})}#imax-email-alert"
+    return f"{dashboard}app.html?{urlencode({'email_verify': value})}#imax-email-alert"
 
 
 def target_unsubscribe_url(
