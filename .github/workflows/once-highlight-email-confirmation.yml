@@ -1,0 +1,127 @@
+name: One-time email confirmation copy styling
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/once-highlight-email-confirmation.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Separate and highlight email confirmation notice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          js_path = Path('docs/alerts.js')
+          css_path = Path('docs/alerts.css')
+          app_path = Path('docs/app.html')
+
+          js = js_path.read_text(encoding='utf-8')
+          css = css_path.read_text(encoding='utf-8')
+          app = app_path.read_text(encoding='utf-8')
+
+          old_js = '''  const title = panel.querySelector(".imax-email-alert-copy h2");
+          const description = panel.querySelector(".imax-email-alert-copy p");
+          const consentText = panel.querySelector(".imax-email-alert-consent span");
+          if (title) title.textContent = info.title;
+          if (description) {
+            description.textContent =
+              `${info.description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.`;
+          }
+          if (consentText) consentText.textContent = info.consent;'''
+          new_js = '''  const title = panel.querySelector(".imax-email-alert-copy h2");
+          const description = panel.querySelector(".imax-email-alert-description");
+          const confirmation = panel.querySelector(".imax-email-alert-confirmation");
+          const consentText = panel.querySelector(".imax-email-alert-consent span");
+          if (title) title.textContent = info.title;
+          if (description) description.textContent = info.description;
+          if (confirmation) {
+            confirmation.textContent =
+              "등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.";
+          }
+          if (consentText) consentText.textContent = info.consent;'''
+          if old_js not in js:
+              raise SystemExit('setPanelCopy anchor not found')
+          js = js.replace(old_js, new_js, 1)
+
+          old_markup = '''      <h2>${targetInfo().title}</h2>
+                <p>${targetInfo().description} 등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</p>'''
+          new_markup = '''      <h2>${targetInfo().title}</h2>
+                <p>
+                  <span class="imax-email-alert-description">${targetInfo().description}</span>
+                  <span class="imax-email-alert-confirmation">등록 완료를 위해 확인 메일의 링크를 한 번 눌러주세요.</span>
+                </p>'''
+          if old_markup not in js:
+              raise SystemExit('alert panel markup anchor not found')
+          js = js.replace(old_markup, new_markup, 1)
+
+          css_anchor = '''.imax-email-alert p {
+            margin: 7px 0 0;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.55;
+          }
+          '''
+          css_replacement = css_anchor + '''
+          .imax-email-alert-confirmation {
+            display: block;
+            margin-top: 2px;
+            color: #e3b341;
+            font-weight: 800;
+          }
+          '''
+          if css_anchor not in css:
+              raise SystemExit('alert paragraph css anchor not found')
+          if '.imax-email-alert-confirmation {' in css:
+              raise SystemExit('confirmation CSS already present')
+          css = css.replace(css_anchor, css_replacement, 1)
+
+          if './alerts.css?v=3' not in app:
+              raise SystemExit('alerts.css v3 reference not found')
+          if './alerts.js?v=8' not in app:
+              raise SystemExit('alerts.js v8 reference not found')
+          app = app.replace('./alerts.css?v=3', './alerts.css?v=4', 1)
+          app = app.replace('./alerts.js?v=8', './alerts.js?v=9', 1)
+
+          js_path.write_text(js, encoding='utf-8')
+          css_path.write_text(css, encoding='utf-8')
+          app_path.write_text(app, encoding='utf-8')
+          PY
+
+          node --check docs/alerts.js
+          grep -q 'imax-email-alert-confirmation' docs/alerts.js
+          grep -q 'color: #e3b341' docs/alerts.css
+          grep -q 'alerts.css?v=4' docs/app.html
+          grep -q 'alerts.js?v=9' docs/app.html
+
+      - name: Publish and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/alerts.js docs/alerts.css docs/app.html
+          git commit -m "Highlight email confirmation instruction"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+          git pull --rebase origin main
+          rm -f .github/workflows/once-highlight-email-confirmation.yml
+          git add -A
+          git commit -m "Remove email confirmation styling helper [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
