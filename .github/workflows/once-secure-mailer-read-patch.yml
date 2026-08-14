@@ -1,0 +1,132 @@
+name: One-time secure mailer read patch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/once-secure-mailer-read-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Patch subscriber mailer reads
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/cgv_imax_watcher/subscriber_mailer_targeted.py')
+          text = path.read_text(encoding='utf-8')
+
+          old_fetch = '''def fetch_subscription_rows(
+              session: requests.Session,
+              base_url: str,
+          ) -> list[dict]:
+              response = session.get(
+                  f"{base_url}/rest/v1/cgv_email_subscriptions",
+                  params={
+                      "select": (
+                          "id,email_ciphertext,created_at,verified,verified_at,"
+                          "confirmation_sent_at,registration_target,identity_claimed"
+                      ),
+                      "active": "eq.true",
+                      "order": "created_at.asc",
+                  },
+                  timeout=20,
+              )
+              response.raise_for_status()
+              return response.json()
+          '''
+          new_fetch = '''def fetch_subscription_rows(
+              session: requests.Session,
+              base_url: str,
+              mailer_secret: str,
+          ) -> list[dict]:
+              rows = mailer.call_rpc_json(
+                  session,
+                  base_url,
+                  "fetch_cgv_email_subscriptions_for_mailer",
+                  {"p_mailer_secret": mailer_secret},
+              )
+              return [row for row in (rows or []) if isinstance(row, dict)]
+
+
+          def fetch_deliveries(
+              session: requests.Session,
+              base_url: str,
+              mailer_secret: str,
+          ) -> set[tuple[str, str, str]]:
+              rows = mailer.call_rpc_json(
+                  session,
+                  base_url,
+                  "fetch_cgv_email_deliveries_for_mailer",
+                  {"p_mailer_secret": mailer_secret},
+              )
+              return {
+                  (
+                      str(row.get("subscription_id", "")),
+                      str(row.get("event_key", "")),
+                      str(row.get("event_signature", "")),
+                  )
+                  for row in (rows or [])
+                  if isinstance(row, dict)
+              }
+          '''
+
+          old_calls = '''        initial_rows = fetch_subscription_rows(session, base_url)
+          '''
+          new_calls = '''        initial_rows = fetch_subscription_rows(
+              session,
+              base_url,
+              mailer_secret,
+          )
+          '''
+
+          old_rows = '''        rows = fetch_subscription_rows(session, base_url)
+          '''
+          new_rows = '''        rows = fetch_subscription_rows(
+              session,
+              base_url,
+              mailer_secret,
+          )
+          '''
+
+          old_deliveries = '''        deliveries = mailer.fetch_deliveries(session, base_url)
+          '''
+          new_deliveries = '''        deliveries = fetch_deliveries(
+              session,
+              base_url,
+              mailer_secret,
+          )
+          '''
+
+          for old, new, label in (
+              (old_fetch, new_fetch, 'subscription fetch'),
+              (old_calls, new_calls, 'initial rows call'),
+              (old_rows, new_rows, 'rows call'),
+              (old_deliveries, new_deliveries, 'deliveries call'),
+          ):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected 1 {label}, found {count}')
+              text = text.replace(old, new, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit patch and remove one-time helpers
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/once-secure-mailer-read-patch.yml
+          rm -f .github/workflows/once-email-identity-backfill-check.yml
+          rm -f .github/workflows/once-cancel-old-mailer.yml
+          git add -A
+          git commit -m "Read subscriber data through protected RPCs [skip ci]"
+          git push
