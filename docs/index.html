@@ -10,8 +10,15 @@
   <title>CGV WATCHER</title>
   <script>
     (() => {
-      const target = new URL('./app.html', window.location.href);
+      const source = new URL(window.location.href);
+      const target = new URL('./app.html', source);
+
+      // Preserve email verification / unsubscribe actions and any other
+      // intentional query parameters while still forcing a fresh app document.
+      target.search = source.search;
       target.searchParams.set('t', Date.now().toString());
+      target.hash = source.hash;
+
       window.location.replace(target.toString());
     })();
   </script>
