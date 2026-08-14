@@ -1,0 +1,292 @@
+name: One-time add multiple email registration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/once-add-multiple-email-registration.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch alert UI safely
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          alerts_path = Path('docs/alerts.js')
+          app_path = Path('docs/app.html')
+          text = alerts_path.read_text(encoding='utf-8')
+          app = app_path.read_text(encoding='utf-8')
+
+          def replace_once(source, old, new, label):
+              count = source.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, got {count}')
+              return source.replace(old, new, 1)
+
+          text = replace_once(
+              text,
+              'const STORAGE_KEY = "cgv-imax-email-alert-v1";\n',
+              'const STORAGE_KEY = "cgv-imax-email-alert-v1";\n'
+              'const SUBSCRIPTIONS_STORAGE_KEY = "cgv-email-alert-subscriptions-v2";\n',
+              'subscriptions storage key',
+          )
+
+          text = replace_once(
+              text,
+              'let savedParentStatus = null;\n',
+              'let savedParentStatus = null;\nlet forceNewRegistration = false;\n',
+              'force-new state',
+          )
+
+          old_storage = '''function saveSubscription(value) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+function clearSavedSubscription(id) {
+  const saved = readSavedSubscription();
+  if (!id || saved?.id === id) {
+    localStorage.removeItem(STORAGE_KEY);
+    savedTargetStates = new Map();
+    savedParentStatus = null;
+  }
+}
+'''
+          new_storage = '''function readSavedSubscriptions() {
+  const current = readSavedSubscription();
+  let values = [];
+  try {
+    const raw = localStorage.getItem(SUBSCRIPTIONS_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    values = Array.isArray(parsed) ? parsed.filter((item) => item?.id && item?.token) : [];
+  } catch {
+    values = [];
+  }
+
+  if (current?.id && current?.token && !values.some((item) => item.id === current.id)) {
+    values.push(current);
+  }
+  return values;
+}
+
+function persistSavedSubscriptions(values) {
+  localStorage.setItem(
+    SUBSCRIPTIONS_STORAGE_KEY,
+    JSON.stringify(values.filter((item) => item?.id && item?.token)),
+  );
+}
+
+function rememberSubscription(value) {
+  if (!value?.id || !value?.token) return;
+  const values = readSavedSubscriptions().filter((item) => item.id !== value.id);
+  values.push(value);
+  persistSavedSubscriptions(values);
+}
+
+function saveSubscription(value) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  rememberSubscription(value);
+}
+
+function clearSavedSubscription(id) {
+  const current = readSavedSubscription();
+  let values = readSavedSubscriptions();
+  if (id) {
+    values = values.filter((item) => item.id !== id);
+    persistSavedSubscriptions(values);
+  } else {
+    values = [];
+    localStorage.removeItem(SUBSCRIPTIONS_STORAGE_KEY);
+  }
+
+  if (!id || current?.id === id) {
+    const replacement = values.at(-1) || null;
+    if (replacement) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(replacement));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+    savedTargetStates = new Map();
+    savedParentStatus = null;
+  }
+}
+'''
+          text = replace_once(text, old_storage, new_storage, 'local subscription history')
+
+          insert_before_configure = '''function updateAdditionalEmailButton() {
+  const button = document.getElementById("imax-email-alert-additional-button");
+  if (!button) return;
+  const saved = readSavedSubscription();
+  button.hidden = !(saved?.id && saved?.token);
+  button.textContent = forceNewRegistration ? "추가 등록 취소" : "+ 다른 이메일 등록";
+}
+
+function toggleAdditionalEmailRegistration() {
+  const saved = readSavedSubscription();
+  if (!saved?.id || !saved?.token) return;
+
+  rememberSubscription(saved);
+  forceNewRegistration = !forceNewRegistration;
+
+  if (forceNewRegistration) {
+    const input = document.getElementById("imax-email-alert-input");
+    const consent = document.getElementById("imax-email-alert-consent");
+    configureForm("new");
+    if (input) input.value = "";
+    if (consent) consent.checked = false;
+    setAlertStatus(
+      `기존 이메일 구독은 그대로 유지됩니다. 새 이메일로 ${targetInfo().label} 알림을 추가 등록할 수 있습니다.`,
+      "info",
+    );
+    input?.focus();
+    return;
+  }
+
+  refreshPanelState();
+}
+
+'''
+          text = replace_once(
+              text,
+              'function configureForm(mode) {\n',
+              insert_before_configure + 'function configureForm(mode) {\n',
+              'additional email helpers',
+          )
+
+          old_pending_end = '''  } else if (mode === "pending") {
+    input.value = "";
+    input.placeholder = "이메일 인증 대기 중";
+    button.textContent = "인증 대기";
+    consent.checked = false;
+  }
+}
+'''
+          new_pending_end = '''  } else if (mode === "pending") {
+    input.value = "";
+    input.placeholder = "이메일 인증 대기 중";
+    button.textContent = "인증 대기";
+    consent.checked = false;
+  }
+  updateAdditionalEmailButton();
+}
+'''
+          text = replace_once(text, old_pending_end, new_pending_end, 'configure form button sync')
+
+          old_refresh = '''  const saved = readSavedSubscription();
+  if (!saved?.id || !saved?.token) {
+'''
+          new_refresh = '''  const saved = readSavedSubscription();
+  if (forceNewRegistration && saved?.id && saved?.token) {
+    configureForm("new");
+    setAlertStatus(
+      `기존 이메일 구독은 그대로 유지됩니다. 새 이메일로 ${targetInfo().label} 알림을 추가 등록할 수 있습니다.`,
+      "info",
+    );
+    return;
+  }
+  if (!saved?.id || !saved?.token) {
+'''
+          text = replace_once(text, old_refresh, new_refresh, 'force-new refresh mode')
+
+          old_markup = '''    <div id="imax-email-alert-status" class="imax-email-alert-status" data-type="info">
+      이메일 주소는 브라우저에서 암호화한 뒤 저장되며, 확인 전에는 오픈 알림이 발송되지 않습니다.
+    </div>
+  `;
+'''
+          new_markup = '''    <div id="imax-email-alert-status" class="imax-email-alert-status" data-type="info">
+      이메일 주소는 브라우저에서 암호화한 뒤 저장되며, 확인 전에는 오픈 알림이 발송되지 않습니다.
+    </div>
+
+    <button
+      id="imax-email-alert-additional-button"
+      type="button"
+      hidden
+      style="width:100%;margin-top:8px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:800;cursor:pointer;"
+    >+ 다른 이메일 등록</button>
+  `;
+'''
+          text = replace_once(text, old_markup, new_markup, 'additional email button markup')
+
+          text = replace_once(
+              text,
+              '  if (saved?.id && saved?.token && savedParentStatus === "verified") {\n',
+              '  if (!forceNewRegistration && saved?.id && saved?.token && savedParentStatus === "verified") {\n',
+              'new-email submit bypass existing target add',
+          )
+
+          old_save_success = '''    saveSubscription({
+      id,
+      token,
+      verified: false,
+      targetKey: currentTargetKey,
+      registeredAt: new Date().toISOString(),
+    });
+    savedParentStatus = "pending";
+'''
+          new_save_success = '''    if (saved?.id && saved?.token) {
+      rememberSubscription(saved);
+    }
+    saveSubscription({
+      id,
+      token,
+      verified: false,
+      targetKey: currentTargetKey,
+      registeredAt: new Date().toISOString(),
+    });
+    forceNewRegistration = false;
+    savedParentStatus = "pending";
+'''
+          text = replace_once(text, old_save_success, new_save_success, 'preserve previous email on new registration')
+
+          old_init_listener = '''  document
+    .getElementById("imax-email-alert-form")
+    ?.addEventListener("submit", registerAlert);
+'''
+          new_init_listener = '''  document
+    .getElementById("imax-email-alert-form")
+    ?.addEventListener("submit", registerAlert);
+  document
+    .getElementById("imax-email-alert-additional-button")
+    ?.addEventListener("click", toggleAdditionalEmailRegistration);
+'''
+          text = replace_once(text, old_init_listener, new_init_listener, 'additional button listener')
+
+          app = replace_once(
+              app,
+              '<script type="module" src="./alerts.js?v=5"></script>',
+              '<script type="module" src="./alerts.js?v=6"></script>',
+              'alerts cache version',
+          )
+
+          alerts_path.write_text(text, encoding='utf-8')
+          app_path.write_text(app, encoding='utf-8')
+          PY
+
+          node --check docs/alerts.js
+          grep -q 'alerts.js?v=6' docs/app.html
+          grep -q 'imax-email-alert-additional-button' docs/alerts.js
+
+      - name: Commit patch and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          git add docs/alerts.js docs/app.html
+          git commit -m "Add additional email alert registration"
+          git push
+
+          git pull --rebase origin main
+          rm -f .github/workflows/once-add-multiple-email-registration.yml
+          git add -A
+          git commit -m "Remove one-time email registration workflow [skip ci]"
+          git push
