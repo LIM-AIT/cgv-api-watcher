@@ -1,10 +1,3 @@
-import("./chat-content-filter.js?v=2")
-  .then(() => import("./chat-identity-guard.js?v=5"))
-  .then(() => import("./chat-admin-minimal-style.js?v=1"))
-  .catch((error) => {
-    console.error("Chat guard modules failed to load", error);
-  });
-
 (() => {
   const STYLE_ID = "header-instagram-style-v2";
   const LINK_CLASS = "developer-instagram-link";

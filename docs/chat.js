@@ -621,10 +621,33 @@ function bindConnectionRecovery() {
   }, FALLBACK_SYNC_MS);
 }
 
+async function loadChatGuardModules() {
+  try {
+    await import("./chat-content-filter.js?v=2");
+    await import("./chat-identity-guard.js?v=6");
+    await import("./chat-admin-minimal-style.js?v=1");
+    return true;
+  } catch (error) {
+    console.error("Chat guard modules failed to load", error);
+    return false;
+  }
+}
+
 async function initChat() {
   buildChat();
+
+  const guardsReady = await loadChatGuardModules();
+
   bindForm();
-  bindAdminControls();
+  if (guardsReady) {
+    bindAdminControls();
+  } else {
+    const adminButton = document.getElementById("imax-chat-admin-button");
+    if (adminButton) {
+      adminButton.disabled = true;
+      adminButton.title = "관리자 모듈을 불러오지 못했습니다. 새로고침해주세요.";
+    }
+  }
   bindPresenceControls();
   bindConnectionRecovery();
 
