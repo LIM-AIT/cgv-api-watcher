@@ -1,0 +1,105 @@
+name: One-time email alert UX cleanup
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/once-hide-extra-email-on-add.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Hide other-email action until current target is subscribed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          js_path = Path('docs/alerts.js')
+          app_path = Path('docs/app.html')
+
+          js = js_path.read_text(encoding='utf-8')
+          app = app_path.read_text(encoding='utf-8')
+
+          old = '''function updateAdditionalEmailButton() {
+            const button = document.getElementById(
+              "imax-email-alert-additional-button",
+            );
+            if (!button) return;
+            const saved = readSavedSubscription();
+            button.hidden = !(saved?.id && saved?.token);
+            button.textContent = forceNewRegistration
+              ? "추가 등록 취소"
+              : "+ 다른 이메일 등록";
+          }'''
+
+          # Preserve formatting exactly as it exists in the source rather than
+          # relying on the indentation of the YAML heredoc.
+          old = old.replace('          ', '')
+          new = '''function updateAdditionalEmailButton(mode) {
+            const button = document.getElementById(
+              "imax-email-alert-additional-button",
+            );
+            if (!button) return;
+            const saved = readSavedSubscription();
+            const hasSavedSubscription = Boolean(saved?.id && saved?.token);
+            button.hidden = !(
+              hasSavedSubscription &&
+              (forceNewRegistration || mode === "subscribed")
+            );
+            button.textContent = forceNewRegistration
+              ? "추가 등록 취소"
+              : "+ 다른 이메일 등록";
+          }'''
+          new = new.replace('          ', '')
+
+          if old not in js:
+              raise SystemExit('additional email button function anchor not found')
+          js = js.replace(old, new, 1)
+
+          old_call = '  updateAdditionalEmailButton();'
+          new_call = '  updateAdditionalEmailButton(mode);'
+          if old_call not in js:
+              raise SystemExit('additional email button call anchor not found')
+          js = js.replace(old_call, new_call, 1)
+
+          if './alerts.js?v=7' not in app:
+              raise SystemExit('alerts.js v7 reference not found')
+          app = app.replace('./alerts.js?v=7', './alerts.js?v=8', 1)
+
+          js_path.write_text(js, encoding='utf-8')
+          app_path.write_text(app, encoding='utf-8')
+          PY
+
+          node --check docs/alerts.js
+          grep -q 'mode === "subscribed"' docs/alerts.js
+          grep -q 'alerts.js?v=8' docs/app.html
+
+      - name: Publish and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add docs/alerts.js docs/app.html
+          git commit -m "Show other-email action only after target subscription"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+          git pull --rebase origin main
+          rm -f .github/workflows/once-hide-extra-email-on-add.yml
+          git add -A
+          git commit -m "Remove email alert UX helper [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
