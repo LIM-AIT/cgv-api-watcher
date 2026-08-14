@@ -54,21 +54,37 @@ mailer.target_unsubscribe_url = target_unsubscribe_url
 def fetch_subscription_rows(
     session: requests.Session,
     base_url: str,
+    mailer_secret: str,
 ) -> list[dict]:
-    response = session.get(
-        f"{base_url}/rest/v1/cgv_email_subscriptions",
-        params={
-            "select": (
-                "id,email_ciphertext,created_at,verified,verified_at,"
-                "confirmation_sent_at,registration_target,identity_claimed"
-            ),
-            "active": "eq.true",
-            "order": "created_at.asc",
-        },
-        timeout=20,
+    rows = mailer.call_rpc_json(
+        session,
+        base_url,
+        "fetch_cgv_email_subscriptions_for_mailer",
+        {"p_mailer_secret": mailer_secret},
     )
-    response.raise_for_status()
-    return response.json()
+    return [row for row in (rows or []) if isinstance(row, dict)]
+
+
+def fetch_deliveries(
+    session: requests.Session,
+    base_url: str,
+    mailer_secret: str,
+) -> set[tuple[str, str, str]]:
+    rows = mailer.call_rpc_json(
+        session,
+        base_url,
+        "fetch_cgv_email_deliveries_for_mailer",
+        {"p_mailer_secret": mailer_secret},
+    )
+    return {
+        (
+            str(row.get("subscription_id", "")),
+            str(row.get("event_key", "")),
+            str(row.get("event_signature", "")),
+        )
+        for row in (rows or [])
+        if isinstance(row, dict)
+    }
 
 
 def load_mailer_secret(private_key) -> str:
@@ -334,7 +350,11 @@ def main() -> int:
 
     session, base_url = mailer.supabase_session()
     try:
-        initial_rows = fetch_subscription_rows(session, base_url)
+        initial_rows = fetch_subscription_rows(
+    session,
+    base_url,
+    mailer_secret,
+)
         duplicate_requests = collect_duplicate_requests(
             session,
             base_url,
@@ -343,7 +363,11 @@ def main() -> int:
             initial_rows,
         )
 
-        rows = fetch_subscription_rows(session, base_url)
+        rows = fetch_subscription_rows(
+    session,
+    base_url,
+    mailer_secret,
+)
         subscriptions = build_subscriptions(
             session,
             base_url,
@@ -380,7 +404,11 @@ def main() -> int:
             sub for sub in subscriptions if sub.verified and sub.targets
         ]
         events = mailer.fetch_open_events(session, base_url)
-        deliveries = mailer.fetch_deliveries(session, base_url)
+        deliveries = fetch_deliveries(
+    session,
+    base_url,
+    mailer_secret,
+)
 
         verified_by_email: dict[str, list[mailer.Subscription]] = defaultdict(list)
         for sub in verified:
