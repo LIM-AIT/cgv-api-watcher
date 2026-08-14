@@ -124,6 +124,70 @@
   color: #ff7b72;
 }
 
+/*
+ * A verified target only needs two compact actions: the current target state
+ * and the option to register another address. Keep both actions on one row.
+ */
+.imax-email-alert:has(
+    .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+  ) .imax-email-alert-form {
+  grid-column: 2;
+  grid-row: 1;
+  display: block;
+  width: calc(50% - 4px);
+  justify-self: start;
+}
+
+.imax-email-alert:has(
+    .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+  ) .imax-email-alert-input {
+  width: 100%;
+  padding: 0 8px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 1;
+  cursor: default;
+}
+
+.imax-email-alert:has(
+    .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+  ) .imax-email-alert-input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.imax-email-alert:has(
+    .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+  ) .imax-email-alert-button {
+  display: none;
+}
+
+.imax-email-alert:has(
+    .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+  ) #imax-email-alert-additional-button {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  justify-self: end;
+  width: calc(50% - 4px) !important;
+  height: 42px;
+  margin: 0 !important;
+  padding: 0 10px !important;
+  border-color: rgba(88, 166, 255, 0.38) !important;
+  background: rgba(88, 166, 255, 0.08) !important;
+  color: #a5d6ff !important;
+  font-size: 11px !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.imax-email-alert:has(
+    .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+  ) .imax-email-alert-consent {
+  display: none;
+}
+
 .sr-only {
   position: absolute !important;
   width: 1px !important;
@@ -190,5 +254,55 @@
 
   .imax-email-alert-status {
     font-size: 9px;
+  }
+
+  .imax-email-alert:has(
+      .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+    ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 6px;
+  }
+
+  .imax-email-alert:has(
+      .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+    ) .imax-email-alert-copy {
+    grid-column: 1 / -1;
+  }
+
+  .imax-email-alert:has(
+      .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+    ) .imax-email-alert-form {
+    grid-column: 1;
+    grid-row: 2;
+    width: 100%;
+  }
+
+  .imax-email-alert:has(
+      .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+    ) .imax-email-alert-input {
+    height: 40px;
+    padding: 0 7px;
+    font-size: 10px !important;
+    letter-spacing: -0.03em;
+  }
+
+  .imax-email-alert:has(
+      .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+    ) #imax-email-alert-additional-button {
+    grid-column: 2;
+    grid-row: 2;
+    width: 100% !important;
+    height: 40px;
+    padding: 0 7px !important;
+    font-size: 10px !important;
+    letter-spacing: -0.03em;
+  }
+
+  .imax-email-alert:has(
+      .imax-email-alert-input[placeholder="이 영화 알림 등록 완료"]
+    ) .imax-email-alert-status {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 0;
   }
 }
