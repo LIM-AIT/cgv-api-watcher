@@ -202,13 +202,17 @@ function setPanelCopy() {
   if (consentText) consentText.textContent = info.consent;
 }
 
-function updateAdditionalEmailButton() {
+function updateAdditionalEmailButton(mode) {
   const button = document.getElementById(
     "imax-email-alert-additional-button",
   );
   if (!button) return;
   const saved = readSavedSubscription();
-  button.hidden = !(saved?.id && saved?.token);
+  const hasSavedSubscription = Boolean(saved?.id && saved?.token);
+  button.hidden = !(
+    hasSavedSubscription &&
+    (forceNewRegistration || mode === "subscribed")
+  );
   button.textContent = forceNewRegistration
     ? "추가 등록 취소"
     : "+ 다른 이메일 등록";
@@ -271,7 +275,7 @@ function configureForm(mode) {
     button.textContent = "인증 대기";
     consent.checked = false;
   }
-  updateAdditionalEmailButton();
+  updateAdditionalEmailButton(mode);
 }
 
 function refreshPanelState() {
