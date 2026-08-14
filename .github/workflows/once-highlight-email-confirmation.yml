@@ -63,15 +63,7 @@ jobs:
 
           if '.imax-email-alert-confirmation {' in css:
               raise SystemExit('confirmation CSS already present')
-          css = css.rstrip() + '''
-
-.imax-email-alert-confirmation {
-  display: block;
-  margin-top: 2px;
-  color: #e3b341;
-  font-weight: 800;
-}
-'''
+          css = css.rstrip() + "\n\n.imax-email-alert-confirmation {\n  display: block;\n  margin-top: 2px;\n  color: #e3b341;\n  font-weight: 800;\n}\n"
 
           if './alerts.css?v=3' not in app:
               raise SystemExit('alerts.css v3 reference not found')
