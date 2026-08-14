@@ -67,6 +67,7 @@ jobs:
         run: |
           set +e
 
+          # v3.1: current Supabase publishable-key client + email deduplication.
           # 30초 간격 × 600회 = 약 5시간
           for cycle in $(seq 1 600); do
             cycle_started=$(date +%s)
