@@ -13,8 +13,11 @@ permissions:
   contents: read
 
 concurrency:
-  group: cgv-subscriber-mailer-${{ github.event_name }}
-  cancel-in-progress: false
+  # Keep exactly one subscriber mailer session alive. A workflow-file push
+  # replaces the currently running session so production code updates take
+  # effect immediately; normal self-dispatches queue without cancelling.
+  group: cgv-subscriber-mailer-workflow_dispatch
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   start-mailer:
