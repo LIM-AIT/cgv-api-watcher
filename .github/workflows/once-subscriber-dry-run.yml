@@ -1,0 +1,75 @@
+name: One-time subscriber delivery-path dry run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/once-subscriber-dry-run.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - name: Verify subscriber read and target path without sending mail
+        env:
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          SUPABASE_URL: "https://yxrfarlhcyaaslwmdyww.supabase.co"
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from src.cgv_imax_watcher import subscriber_mailer_targeted as targeted
+          from src.cgv_imax_watcher import subscriber_mailer_v3 as mailer
+
+          private_key = mailer.load_private_key(
+              Path('.github/secure/alert-private-key.enc.json'),
+              mailer.smtp_password(),
+          )
+          mailer_secret = targeted.load_mailer_secret(private_key)
+          session, base_url = mailer.supabase_session()
+          try:
+              rows = targeted.fetch_subscription_rows(session, base_url, mailer_secret)
+              subscriptions = targeted.build_subscriptions(
+                  session, base_url, private_key, rows
+              )
+              verified = [s for s in subscriptions if s.verified and s.targets]
+              odyssey = [s for s in verified if 'odyssey_imax' in s.targets]
+              screenx = [s for s in verified if 'spiderman_screenx' in s.targets]
+              unreadable = len(rows) - len(subscriptions)
+              print(f'ACTIVE_ROWS={len(rows)}')
+              print(f'READABLE_SUBSCRIPTIONS={len(subscriptions)}')
+              print(f'UNREADABLE_SUBSCRIPTIONS={unreadable}')
+              print(f'VERIFIED_SUBSCRIPTIONS={len(verified)}')
+              print(f'ODYSSEY_VERIFIED_SUBSCRIBERS={len(odyssey)}')
+              print(f'SCREENX_VERIFIED_SUBSCRIBERS={len(screenx)}')
+              if unreadable != 0:
+                  raise SystemExit('Unreadable active subscription detected')
+              if len(odyssey) != 9:
+                  raise SystemExit(f'Expected 9 Odyssey verified subscribers, got {len(odyssey)}')
+              if len(screenx) != 2:
+                  raise SystemExit(f'Expected 2 ScreenX verified subscribers, got {len(screenx)}')
+          finally:
+              session.close()
+          PY
+      - name: Remove one-time workflow
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+          rm -f .github/workflows/once-subscriber-dry-run.yml
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Remove subscriber dry-run workflow [skip ci]"
+            git push
+          fi
