@@ -1,8 +1,8 @@
 {
   "service": "CGV WATCHER",
   "status": "OPEN",
-  "checked_at": "2026-08-14T10:55:34+09:00",
-  "checked_at_display": "2026-08-14 10:55:34 KST",
+  "checked_at": "2026-08-14T10:58:00+09:00",
+  "checked_at_display": "2026-08-14 10:58:00 KST",
   "default_target": "odyssey_imax",
   "movie_keyword": "오디세이",
   "display_name": "The Odyssey",
