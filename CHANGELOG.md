@@ -2,6 +2,22 @@
 
 All notable project changes are documented here.
 
+## [Unreleased] - 2026-08-18
+
+### Reliability
+- Subscriber Mailer의 약 5시간 self-chaining 단계에 dispatch retry 추가
+- 다음 `workflow_dispatch` 호출 실패 시 최대 6회, 15초 간격으로 재시도하도록 보강
+- 일시적인 GitHub Actions API 5xx 오류 한 번이 전체 mailer 정지로 이어지는 single-point-of-failure 완화
+
+### Operations
+- 2026-08-18 Subscriber Mailer run에서 다음 세션 dispatch 시 GitHub API `HTTP 503 Service Unavailable`이 발생해 self-chain이 중단된 사례 기록
+- Mailer 본체 처리 실패와 마지막 self-dispatch/orchestration 실패를 구분하는 진단 절차 추가
+- 모든 retry 실패 시 GitHub Actions의 `Run workflow` / `main`을 통한 수동 복구 절차 문서화
+- `curl --fail-with-body` exit code 22 발생 시 HTTP response status/body를 우선 확인하도록 runbook 보강
+
+### Documentation
+- `README.md`, `docs/architecture.md`, `docs/operations.md`를 현재 Subscriber Mailer 운영 구조에 맞게 최신화
+
 ## [2.0.0] - 2026-08-12
 
 ### Added
