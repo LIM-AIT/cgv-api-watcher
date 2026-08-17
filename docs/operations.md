@@ -135,19 +135,45 @@ Workflow:
 운영 특성:
 
 - 약 30초 간격
-- 약 5시간 세션
-- 종료 후 자동 재시작
+- 600 cycle, 약 5시간 세션
+- 종료 후 GitHub Actions `workflow_dispatch` API로 다음 세션 자동 시작
+- 다음 세션 dispatch 실패 시 최대 6회, 15초 간격으로 재시도
 - Gmail SMTP 사용
 - Supabase 구독 데이터 사용
 - 최신 `docs/status.json`을 기반으로 알림 판단
+- workflow 파일 자체가 `main`에 변경되면 기존 mailer 세션을 교체하고 새 세션을 시작
 
-문제 시 확인:
+### Mailer health check
 
-1. workflow 실행 상태
-2. SMTP GitHub Secrets
-3. Supabase 접근/RLS/RPC 상태
-4. `STATUS_URL`에서 최신 JSON 조회 가능 여부
-5. mailer log의 발송/중복방지 메시지
+정상 상태는 GitHub Actions의 최신 `CGV Subscriber Mailer` run이 `In progress`인 상태입니다. 약 5시간 세션이 끝난 직후에는 이전 run이 성공하고 `github-actions[bot]`이 시작한 다음 run이 생성되는지 확인합니다.
+
+문제 시 확인 순서:
+
+1. 최신 `CGV Subscriber Mailer` workflow가 실행 중인지 확인
+2. 마지막 실패 run의 `mailer` job을 열어 실패 step 확인
+3. `Run continuous subscriber mailer`가 성공하고 `Start next subscriber mailer session`만 실패했다면 self-chaining 장애로 분류
+4. self-dispatch 로그의 HTTP status/response body 확인
+5. SMTP GitHub Secrets 확인
+6. Supabase 접근/RLS/RPC 상태 확인
+7. `STATUS_URL`에서 최신 JSON 조회 가능 여부 확인
+8. mailer log의 발송/중복방지 메시지 확인
+
+### Self-dispatch recovery
+
+2026-08-18 운영 중 GitHub Actions API가 다음 세션 dispatch 요청에 일시적으로 `HTTP 503 Service Unavailable`을 반환하면서 self-chain이 끊긴 사례가 있었습니다. Mailer 본체는 약 5시간 정상 실행되었지만 마지막 dispatch 한 번의 실패로 후속 세션이 생성되지 않았습니다.
+
+현재는 마지막 dispatch를 최대 6회, 15초 간격으로 재시도합니다. 따라서 일시적인 GitHub API 5xx 오류가 발생해도 즉시 전체 mailer가 정지하지 않습니다.
+
+모든 재시도 후에도 다음 세션이 생성되지 않은 경우:
+
+1. GitHub Actions → `CGV Subscriber Mailer`
+2. `Run workflow`
+3. Branch `main`
+4. `Run workflow` 실행
+5. 새 run의 `mailer` job이 `In progress`인지 확인
+6. 이전 실패 run의 `Start next subscriber mailer session` 로그를 보존하고 HTTP status를 확인
+
+`curl` exit code 22는 `--fail-with-body` 사용 시 HTTP 4xx/5xx 응답을 의미하므로 response body와 함께 원인을 판단합니다. Node.js deprecation warning은 별도 경고이며 self-dispatch HTTP 실패와 혼동하지 않습니다.
 
 ## 7. Realtime Chat
 
@@ -293,5 +319,6 @@ Watcher의 자동 `status.json` commit이 HEAD를 계속 이동시킬 수 있으
 - 모바일 캐시 방어
 - 초기 강제 reload 제거
 - 관리자 표시 별도 보강 모듈
+- Subscriber Mailer self-dispatch 재시도 및 수동 복구 절차
 
 기능 추가 시 이 구조를 유지하면서 작은 단위로 확장하는 것을 기본 원칙으로 합니다.
