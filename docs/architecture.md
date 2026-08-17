@@ -161,11 +161,29 @@ flowchart LR
 
 `.github/workflows/subscriber-mailer.yml`
 
+```mermaid
+flowchart LR
+    A[workflow_dispatch] --> B[Checkout / Python]
+    B --> C[600 cycles]
+    C --> D[run_subscriber_mailer.py]
+    D --> E[Sleep to ~30s interval]
+    E --> C
+    C --> F[Dispatch next session]
+    F -->|success| G[Next mailer run]
+    F -->|HTTP error| H[Retry up to 6 times]
+    H -->|success| G
+    H -->|all failed| I[Workflow failure / manual recovery]
+```
+
 - 약 30초 간격
-- 약 5시간 단위 세션
+- 600 cycle, 약 5시간 단위 세션
 - `status.json`과 Supabase 구독 정보를 사용
 - Gmail SMTP 발송
 - 종료 후 다음 mailer 세션 자동 dispatch
+- self-dispatch가 일시적인 GitHub API 오류로 실패하면 최대 6회, 15초 간격으로 재시도
+- workflow 파일 자체가 `main`에 push되면 concurrency 정책에 따라 기존 mailer 세션을 교체하고 새 production session을 시작
+
+2026-08-18 실제 운영에서 다음 세션 dispatch 순간 GitHub API가 `HTTP 503 Service Unavailable`을 반환하여 self-chain이 한 차례 중단되었습니다. 이는 mailer 본체의 처리 실패가 아니라 orchestration 경계의 일시적 API 장애였으며, 이후 dispatch retry를 추가해 단일 5xx 응답이 전체 mailer 정지로 이어지지 않도록 보강했습니다.
 
 ## 4. GitHub Pages Frontend
 
@@ -274,6 +292,8 @@ UI 표시:
 
 대시보드에서 관리되는 구독 정보는 Supabase에 저장되고 `subscriber-mailer.yml`이 별도로 처리합니다.
 
+Mailer orchestration과 실제 메일 처리 로직은 분리해서 봅니다. `Run continuous subscriber mailer`가 정상 완료되고 마지막 `Start next subscriber mailer session`만 실패한 경우 메일 처리 장애가 아니라 self-chaining/orchestration 장애입니다.
+
 ## 7. Data / Trust Boundaries
 
 ```mermaid
@@ -305,6 +325,7 @@ Secret:
 - UI 수정 시 commit SHA보다 해당 파일의 blob SHA를 기준으로 수정 충돌을 확인하는 것이 안전합니다.
 - repository에 commit이 존재해도 GitHub Pages build가 완료되기 전에는 실제 사이트에 반영되지 않을 수 있습니다.
 - 모바일 UI 확인 시 루트 URL에서 `app.html?t=...`로 전환되는 것이 정상입니다.
+- 장시간 workflow의 마지막 self-dispatch는 외부 API 호출이므로 일시적 5xx에 대비한 retry를 유지합니다.
 
 ## Project Boundary
 
