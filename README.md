@@ -28,6 +28,7 @@ CGV 상영 일정 API를 주기적으로 확인하고, 지정 영화/특별관�
 - 극장/날짜별 예매 페이지 바로가기
 - 개인 Gmail 알림 및 중복 알림 방지
 - 구독자 이메일 알림 처리
+- Subscriber Mailer 장시간 self-chaining + dispatch retry
 - Supabase 기반 실시간 채팅
 - 관리자 인증/관리자 전용 메시지 표시
 - 보호 닉네임 차단 및 채팅 금칙어 필터
@@ -68,6 +69,8 @@ CGV 상영 일정 API를 주기적으로 확인하고, 지정 영화/특별관�
 
 `.github/workflows/subscriber-mailer.yml`은 약 **30초 간격**으로 구독 상태와 최신 `status.json`을 확인하고 필요한 이메일을 발송합니다.
 
+Mailer는 600 cycle, 약 5시간 단위로 실행된 뒤 다음 세션을 `workflow_dispatch`로 자동 시작합니다. GitHub Actions API의 일시적인 4xx/5xx 응답으로 self-chain이 끊기는 위험을 줄이기 위해 다음 세션 dispatch는 **최대 6회, 15초 간격으로 재시도**합니다.
+
 ### Dashboard
 
 GitHub Pages는 `docs/`를 서비스합니다.
@@ -91,14 +94,17 @@ flowchart TD
     D --> E[GitHub Pages Dashboard]
     D --> F[Subscriber Mailer]
     F --> G[Gmail SMTP]
+    F --> H[Next Mailer Session]
+    H -->|temporary API error| I[Dispatch Retry]
+    I --> H
 
-    H[Browser] --> E
-    H --> I[Supabase]
-    I --> J[Realtime Chat / Presence]
-    I --> K[Alert Subscription Data]
+    J[Browser] --> E
+    J --> K[Supabase]
+    K --> L[Realtime Chat / Presence]
+    K --> M[Alert Subscription Data]
 
-    E --> L[Cache-safe Bootstrap]
-    L --> M[app.html + Service Worker]
+    E --> N[Cache-safe Bootstrap]
+    N --> O[app.html + Service Worker]
 ```
 
 자세한 구조는 [`docs/architecture.md`](docs/architecture.md), 운영 절차는 [`docs/operations.md`](docs/operations.md)를 참고하세요.
@@ -185,7 +191,7 @@ pytest
 | Workflow | Purpose |
 |---|---|
 | `watch.yml` | CGV 감시 + `status.json` 갱신 |
-| `subscriber-mailer.yml` | 구독자 이메일 발송 |
+| `subscriber-mailer.yml` | 구독자 이메일 발송 + resilient self-chaining |
 | `restart-dates.yml` | 감시 날짜/세션 관련 운영 보조 |
 | `ui-cache-version.yml` | UI 변경 시 cache version marker 갱신 |
 | `ci.yml` | lint/test |
@@ -236,6 +242,7 @@ state.json
 - 현재 루트 URL은 `index.html` bootstrap을 거쳐 `app.html?t=...`로 진입하는 구조입니다.
 - GitHub Pages 배포가 완료되기 전에는 최신 커밋이 repository에는 있어도 사이트에는 아직 보이지 않을 수 있습니다.
 - CGV API 응답 구조가 변경되면 matcher/exporter 수정이 필요할 수 있습니다.
+- Subscriber Mailer가 약 5시간 후 사라져 있으면 마지막 run의 `Start next subscriber mailer session` 로그에서 HTTP status를 먼저 확인합니다. 모든 retry가 실패한 경우 `Run workflow`에서 `main`을 수동 실행해 복구할 수 있습니다.
 
 운영 체크리스트는 [`docs/operations.md`](docs/operations.md)에 정리되어 있습니다.
 
