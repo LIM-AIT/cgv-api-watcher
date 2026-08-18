@@ -15,7 +15,7 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         pageUrl.searchParams.get("appv") ||
         Date.now().toString();
 
-      const workerUrl = `./sw.js?swv=7&t=${encodeURIComponent(pageToken)}`;
+      const workerUrl = `./sw.js?swv=8&t=${encodeURIComponent(pageToken)}`;
 
       await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
@@ -152,5 +152,171 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
     if (!document.hidden) {
       window.setTimeout(refreshStatusWhenReady, 100);
     }
+  });
+})();
+
+(() => {
+  // Keep dashboard refreshes aligned to the watcher's real 150-second cycle.
+  // This changes only browser-side status reads; it never calls the CGV API.
+  const WATCH_INTERVAL_MS = 150 * 1000;
+  const PROPAGATION_GRACE_MS = 5 * 1000;
+  const STALE_RETRY_MS = 10 * 1000;
+  const MAX_STALE_RETRIES = 5;
+  const HIDDEN_RETRY_MS = 15 * 1000;
+
+  let alignedTimer = null;
+  let latestSeenCheckedAtMs = Number.NaN;
+  let syncRefreshInFlight = false;
+  let staleRetryCount = 0;
+
+  function clearAlignedTimer() {
+    if (alignedTimer) {
+      clearTimeout(alignedTimer);
+      alignedTimer = null;
+    }
+  }
+
+  function clearLegacyAlignedTimers() {
+    // app.html used to maintain a separate 5-minute aligned timer. Clear any
+    // instance that may have been created before this deferred guard executed.
+    try {
+      if (typeof autoRefreshTimer !== "undefined" && autoRefreshTimer) {
+        clearTimeout(autoRefreshTimer);
+        autoRefreshTimer = null;
+      }
+      if (typeof staleRetryTimer !== "undefined" && staleRetryTimer) {
+        clearTimeout(staleRetryTimer);
+        staleRetryTimer = null;
+      }
+    } catch (error) {
+      console.debug("Legacy dashboard timer cleanup skipped", error);
+    }
+  }
+
+  function scheduleAlignedRefresh() {
+    clearAlignedTimer();
+    clearLegacyAlignedTimers();
+
+    if (!Number.isFinite(latestSeenCheckedAtMs)) return;
+
+    const expectedAt =
+      latestSeenCheckedAtMs + WATCH_INTERVAL_MS + PROPAGATION_GRACE_MS;
+    const delay = Math.max(1000, expectedAt - Date.now());
+
+    alignedTimer = setTimeout(() => {
+      void refreshUntilNewResult();
+    }, delay);
+  }
+
+  async function refreshUntilNewResult() {
+    clearAlignedTimer();
+
+    if (document.hidden) {
+      alignedTimer = setTimeout(() => {
+        void refreshUntilNewResult();
+      }, HIDDEN_RETRY_MS);
+      return;
+    }
+
+    if (typeof window.loadStatus !== "function") return;
+
+    const previousCheckedAtMs = latestSeenCheckedAtMs;
+    syncRefreshInFlight = true;
+
+    try {
+      await window.loadStatus();
+    } finally {
+      syncRefreshInFlight = false;
+    }
+
+    if (
+      Number.isFinite(latestSeenCheckedAtMs) &&
+      latestSeenCheckedAtMs > previousCheckedAtMs
+    ) {
+      staleRetryCount = 0;
+      scheduleAlignedRefresh();
+      return;
+    }
+
+    staleRetryCount += 1;
+
+    if (staleRetryCount <= MAX_STALE_RETRIES) {
+      alignedTimer = setTimeout(() => {
+        void refreshUntilNewResult();
+      }, STALE_RETRY_MS);
+      return;
+    }
+
+    // Do not spin aggressively if GitHub is delayed. Fall back to a modest
+    // retry, while the existing manual refresh and safety interval still work.
+    staleRetryCount = 0;
+    alignedTimer = setTimeout(() => {
+      void refreshUntilNewResult();
+    }, 30 * 1000);
+  }
+
+  const originalSetLiveReference = window.setLiveReference;
+
+  if (
+    typeof originalSetLiveReference !== "function" ||
+    typeof window.loadStatus !== "function"
+  ) {
+    return;
+  }
+
+  window.scheduleAlignedAutoRefresh = () => {
+    if (!syncRefreshInFlight) {
+      scheduleAlignedRefresh();
+    }
+  };
+
+  window.setLiveReference = function setAlignedLiveReference(checkedAtValue) {
+    const parsed = Date.parse(checkedAtValue || "");
+    if (Number.isFinite(parsed)) {
+      latestSeenCheckedAtMs = parsed;
+    }
+
+    const result = originalSetLiveReference.call(this, checkedAtValue);
+
+    if (!syncRefreshInFlight) {
+      staleRetryCount = 0;
+      scheduleAlignedRefresh();
+    }
+
+    return result;
+  };
+
+  // Seed the aligned scheduler if the initial status request completed before
+  // this deferred guard installed the wrappers.
+  try {
+    if (typeof latestCheckedAtValue === "string") {
+      const parsed = Date.parse(latestCheckedAtValue);
+      if (Number.isFinite(parsed)) {
+        latestSeenCheckedAtMs = parsed;
+      }
+    }
+  } catch (error) {
+    console.debug("Initial dashboard timestamp seed skipped", error);
+  }
+
+  clearLegacyAlignedTimers();
+
+  if (Number.isFinite(latestSeenCheckedAtMs)) {
+    scheduleAlignedRefresh();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+
+    if (
+      Number.isFinite(latestSeenCheckedAtMs) &&
+      Date.now() >=
+        latestSeenCheckedAtMs + WATCH_INTERVAL_MS + PROPAGATION_GRACE_MS
+    ) {
+      void refreshUntilNewResult();
+      return;
+    }
+
+    scheduleAlignedRefresh();
   });
 })();
