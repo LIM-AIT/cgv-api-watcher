@@ -15,7 +15,7 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         pageUrl.searchParams.get("appv") ||
         Date.now().toString();
 
-      const workerUrl = `./sw.js?swv=9&t=${encodeURIComponent(pageToken)}`;
+      const workerUrl = `./sw.js?swv=10&t=${encodeURIComponent(pageToken)}`;
 
       await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
@@ -50,6 +50,11 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
   const API_DUPLICATE_GUARD_MS = 5 * 1000;
   const API_STATE_KEY = "cgv-status-api-state-v3";
   const API_DEFAULT_BACKOFF_MS = 10 * 60 * 1000;
+
+  // Never allow a later browser refresh to replace an already displayed
+  // watcher result with an older RAW/CDN snapshot. This in-memory candidate is
+  // refreshed whenever a newer checked_at is observed.
+  let freshestAcceptedData = null;
 
   function checkedAtTime(data) {
     const value = data?.checked_at;
@@ -223,6 +228,13 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
       .filter((result) => result.status === "fulfilled")
       .map((result) => result.value);
 
+    // A follow-up safety refresh can arrive while RAW still exposes the
+    // previous revision. Keep the newest payload already accepted by this tab
+    // in the comparison so checked_at can only move forward, never backward.
+    if (freshestAcceptedData) {
+      candidates.push(freshestAcceptedData);
+    }
+
     if (!candidates.length) {
       return originalFetch(input, init);
     }
@@ -233,6 +245,7 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         : latest;
     });
 
+    freshestAcceptedData = freshest;
     markObservedStatus(freshest);
 
     return new Response(JSON.stringify(freshest), {
