@@ -15,7 +15,7 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         pageUrl.searchParams.get("appv") ||
         Date.now().toString();
 
-      const workerUrl = `./sw.js?swv=5&t=${encodeURIComponent(pageToken)}`;
+      const workerUrl = `./sw.js?swv=6&t=${encodeURIComponent(pageToken)}`;
 
       await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
@@ -39,4 +39,97 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) void registerFreshNetworkWorker();
   });
+})();
+
+(() => {
+  const originalFetch = window.fetch.bind(window);
+  const RAW_STATUS_URL =
+    "https://raw.githubusercontent.com/" +
+    "LIM-AIT/cgv-api-watcher/main/docs/status.json";
+
+  function checkedAtTime(data) {
+    const value = data?.checked_at;
+    const parsed = value ? Date.parse(value) : Number.NaN;
+    return Number.isFinite(parsed) ? parsed : -1;
+  }
+
+  async function fetchJsonCandidate(url, init) {
+    const response = await originalFetch(url, {
+      ...init,
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  window.fetch = async (input, init = {}) => {
+    let requestUrl;
+
+    try {
+      if (typeof input === "string" || input instanceof URL) {
+        requestUrl = new URL(input, window.location.href);
+      } else if (input?.url) {
+        requestUrl = new URL(input.url, window.location.href);
+      } else {
+        return originalFetch(input, init);
+      }
+    } catch {
+      return originalFetch(input, init);
+    }
+
+    const isLocalStatusRequest =
+      requestUrl.origin === window.location.origin &&
+      requestUrl.pathname.endsWith("/cgv-api-watcher/status.json");
+
+    if (!isLocalStatusRequest) {
+      return originalFetch(input, init);
+    }
+
+    const token = Date.now().toString();
+    const pagesUrl = new URL(requestUrl);
+    pagesUrl.searchParams.set("fresh", token);
+
+    const rawUrl = new URL(RAW_STATUS_URL);
+    rawUrl.searchParams.set("fresh", token);
+
+    const results = await Promise.allSettled([
+      fetchJsonCandidate(pagesUrl.toString(), init),
+      fetchJsonCandidate(rawUrl.toString(), init),
+    ]);
+
+    const candidates = results
+      .filter((result) => result.status === "fulfilled")
+      .map((result) => result.value);
+
+    if (!candidates.length) {
+      return originalFetch(input, init);
+    }
+
+    const freshest = candidates.reduce((latest, candidate) => {
+      return checkedAtTime(candidate) > checkedAtTime(latest)
+        ? candidate
+        : latest;
+    });
+
+    return new Response(JSON.stringify(freshest), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  };
+
+  // app.html performs an initial status load before this guard may finish loading.
+  // Re-run once with the freshest-source selector active so stale Pages data is
+  // corrected immediately without waiting for the next timer/manual refresh.
+  window.setTimeout(() => {
+    if (typeof window.loadStatus === "function") {
+      void window.loadStatus();
+    }
+  }, 0);
 })();
