@@ -169,6 +169,12 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
   let syncRefreshInFlight = false;
   let staleRetryCount = 0;
 
+  const sectionHint = document.querySelector(".section-hint");
+  if (sectionHint) {
+    sectionHint.textContent =
+      "상태 정보는 약 150초 주기로 자동 갱신됩니다.";
+  }
+
   function clearAlignedTimer() {
     if (alignedTimer) {
       clearTimeout(alignedTimer);
