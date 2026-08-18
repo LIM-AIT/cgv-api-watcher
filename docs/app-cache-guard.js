@@ -15,7 +15,7 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         pageUrl.searchParams.get("appv") ||
         Date.now().toString();
 
-      const workerUrl = `./sw.js?swv=6&t=${encodeURIComponent(pageToken)}`;
+      const workerUrl = `./sw.js?swv=7&t=${encodeURIComponent(pageToken)}`;
 
       await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
@@ -124,12 +124,33 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
     });
   };
 
-  // app.html performs an initial status load before this guard may finish loading.
-  // Re-run once with the freshest-source selector active so stale Pages data is
-  // corrected immediately without waiting for the next timer/manual refresh.
-  window.setTimeout(() => {
+  function refreshStatusWhenReady() {
     if (typeof window.loadStatus === "function") {
       void window.loadStatus();
     }
-  }, 0);
+  }
+
+  // app.html starts its first status request before this guard is guaranteed to
+  // be active. That request can still be in-flight, so a zero-delay retry may be
+  // ignored by loadStatus() while isLoading is true. Retry after the initial
+  // request has had time to finish so a browser refresh cannot stay on stale
+  // GitHub Pages data.
+  [250, 1000, 2500].forEach((delay) => {
+    window.setTimeout(refreshStatusWhenReady, delay);
+  });
+
+  window.addEventListener("load", () => {
+    window.setTimeout(refreshStatusWhenReady, 100);
+    window.setTimeout(refreshStatusWhenReady, 1000);
+  });
+
+  window.addEventListener("pageshow", () => {
+    window.setTimeout(refreshStatusWhenReady, 100);
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      window.setTimeout(refreshStatusWhenReady, 100);
+    }
+  });
 })();
