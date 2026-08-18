@@ -15,16 +15,12 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         pageUrl.searchParams.get("appv") ||
         Date.now().toString();
 
-      const workerUrl = `./sw.js?swv=8&t=${encodeURIComponent(pageToken)}`;
+      const workerUrl = `./sw.js?swv=9&t=${encodeURIComponent(pageToken)}`;
 
       await navigator.serviceWorker.register(workerUrl, {
         scope: SERVICE_WORKER_SCOPE,
         updateViaCache: "none",
       });
-
-      // Deliberately do not reload on controllerchange.
-      // The root bootstrap already gives each visit a fresh app.html?t=... URL,
-      // and the worker will transparently control subsequent requests/visits.
     } catch (error) {
       console.debug("Service worker registration skipped", error);
     }
@@ -46,11 +42,108 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
   const RAW_STATUS_URL =
     "https://raw.githubusercontent.com/" +
     "LIM-AIT/cgv-api-watcher/main/docs/status.json";
+  const CONTENTS_STATUS_URL =
+    "https://api.github.com/repos/" +
+    "LIM-AIT/cgv-api-watcher/contents/docs/status.json?ref=main";
+  const WATCH_INTERVAL_MS = 150 * 1000;
+  const API_GRACE_MS = 5 * 1000;
+  const API_DUPLICATE_GUARD_MS = 5 * 1000;
+  const API_STATE_KEY = "cgv-status-api-state-v3";
+  const API_DEFAULT_BACKOFF_MS = 10 * 60 * 1000;
 
   function checkedAtTime(data) {
     const value = data?.checked_at;
     const parsed = value ? Date.parse(value) : Number.NaN;
     return Number.isFinite(parsed) ? parsed : -1;
+  }
+
+  function currentDisplayedCheckedAtMs() {
+    try {
+      if (typeof latestCheckedAtValue === "string") {
+        const parsed = Date.parse(latestCheckedAtValue);
+        if (Number.isFinite(parsed)) return parsed;
+      }
+    } catch {
+      // The dashboard's initial request can happen before this binding exists.
+    }
+
+    return -1;
+  }
+
+  function readApiState() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(API_STATE_KEY) || "{}");
+      return {
+        lastRequestAt: Number(parsed.lastRequestAt) || 0,
+        dueCycleBase: Number(parsed.dueCycleBase) || -1,
+        preCycleBaseline: Number(parsed.preCycleBaseline) || -1,
+        backoffUntil: Number(parsed.backoffUntil) || 0,
+      };
+    } catch {
+      return {
+        lastRequestAt: 0,
+        dueCycleBase: -1,
+        preCycleBaseline: -1,
+        backoffUntil: 0,
+      };
+    }
+  }
+
+  function writeApiState(state) {
+    try {
+      localStorage.setItem(API_STATE_KEY, JSON.stringify(state));
+    } catch {
+      // RAW remains available even when storage is unavailable.
+    }
+  }
+
+  function reserveContentsApiRequest() {
+    const now = Date.now();
+    const baseline = currentDisplayedCheckedAtMs();
+    const state = readApiState();
+
+    if (now < state.backoffUntil) return false;
+    if (now - state.lastRequestAt < API_DUPLICATE_GUARD_MS) return false;
+
+    const dueForNextWatcherResult =
+      Number.isFinite(baseline) &&
+      baseline > 0 &&
+      now >= baseline + WATCH_INTERVAL_MS + API_GRACE_MS;
+
+    if (dueForNextWatcherResult) {
+      if (state.dueCycleBase === baseline) return false;
+      state.dueCycleBase = baseline;
+    } else {
+      if (state.preCycleBaseline === baseline) return false;
+      state.preCycleBaseline = baseline;
+    }
+
+    state.lastRequestAt = now;
+    writeApiState(state);
+    return true;
+  }
+
+  function markObservedStatus(data) {
+    const checkedAtMs = checkedAtTime(data);
+    if (checkedAtMs < 0) return;
+
+    const state = readApiState();
+    state.preCycleBaseline = checkedAtMs;
+    writeApiState(state);
+  }
+
+  function markApiBackoff(response) {
+    const state = readApiState();
+    const resetSeconds = Number(response.headers.get("x-ratelimit-reset"));
+    const resetAt = Number.isFinite(resetSeconds)
+      ? resetSeconds * 1000 + 1000
+      : 0;
+
+    state.backoffUntil = Math.max(
+      Date.now() + API_DEFAULT_BACKOFF_MS,
+      resetAt,
+    );
+    writeApiState(state);
   }
 
   async function fetchJsonCandidate(url, init) {
@@ -64,6 +157,30 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
     }
 
     return response.json();
+  }
+
+  async function fetchContentsApiCandidate(init) {
+    const response = await originalFetch(CONTENTS_STATUS_URL, {
+      ...init,
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      if (response.status === 403 || response.status === 429) {
+        markApiBackoff(response);
+      }
+      throw new Error(`GitHub Contents API HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (typeof payload?.content !== "string") {
+      throw new Error("GitHub Contents API returned no file content");
+    }
+
+    const binary = atob(payload.content.replace(/\s/g, ""));
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const text = new TextDecoder("utf-8").decode(bytes);
+    return JSON.parse(text);
   }
 
   window.fetch = async (input, init = {}) => {
@@ -90,17 +207,18 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
     }
 
     const token = Date.now().toString();
-    const pagesUrl = new URL(requestUrl);
-    pagesUrl.searchParams.set("fresh", token);
-
     const rawUrl = new URL(RAW_STATUS_URL);
     rawUrl.searchParams.set("fresh", token);
 
-    const results = await Promise.allSettled([
-      fetchJsonCandidate(pagesUrl.toString(), init),
+    const requests = [
       fetchJsonCandidate(rawUrl.toString(), init),
-    ]);
+    ];
 
+    if (reserveContentsApiRequest()) {
+      requests.push(fetchContentsApiCandidate(init));
+    }
+
+    const results = await Promise.allSettled(requests);
     const candidates = results
       .filter((result) => result.status === "fulfilled")
       .map((result) => result.value);
@@ -114,6 +232,8 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
         ? candidate
         : latest;
     });
+
+    markObservedStatus(freshest);
 
     return new Response(JSON.stringify(freshest), {
       status: 200,
@@ -130,11 +250,6 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
     }
   }
 
-  // app.html starts its first status request before this guard is guaranteed to
-  // be active. That request can still be in-flight, so a zero-delay retry may be
-  // ignored by loadStatus() while isLoading is true. Retry after the initial
-  // request has had time to finish so a browser refresh cannot stay on stale
-  // GitHub Pages data.
   [250, 1000, 2500].forEach((delay) => {
     window.setTimeout(refreshStatusWhenReady, delay);
   });
@@ -183,8 +298,6 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
   }
 
   function clearLegacyAlignedTimers() {
-    // app.html used to maintain a separate 5-minute aligned timer. Clear any
-    // instance that may have been created before this deferred guard executed.
     try {
       if (typeof autoRefreshTimer !== "undefined" && autoRefreshTimer) {
         clearTimeout(autoRefreshTimer);
@@ -253,8 +366,6 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
       return;
     }
 
-    // Do not spin aggressively if GitHub is delayed. Fall back to a modest
-    // retry, while the existing manual refresh and safety interval still work.
     staleRetryCount = 0;
     alignedTimer = setTimeout(() => {
       void refreshUntilNewResult();
@@ -292,8 +403,6 @@ import("./chat-official-admin-direct.js?v=1").catch((error) => {
     return result;
   };
 
-  // Seed the aligned scheduler if the initial status request completed before
-  // this deferred guard installed the wrappers.
   try {
     if (typeof latestCheckedAtValue === "string") {
       const parsed = Date.parse(latestCheckedAtValue);
