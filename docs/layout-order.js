@@ -1,10 +1,6 @@
 (() => {
   const RETRY_DELAYS = [0, 100, 300, 700, 1500, 3000, 6000];
-  const DEFAULT_VISIBLE_MMDD = 902;
-  const TARGET_VISIBLE_MMDD = {
-    odyssey_imax: 902,
-    spiderman_screenx: 827,
-  };
+  const VISIBLE_DATE_COUNT = 8;
   const DATE_MORE_STYLE_ID = "date-more-toggle-style-v1";
   const REACTION_LEADERBOARD_ASSET_ID = "reaction-leaderboard-asset-v1";
   const MOVIE_SWITCHER_ASSET_ID = "movie-switcher-asset-v1";
@@ -172,28 +168,13 @@ localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
     document.head.appendChild(style);
   }
 
-  function dateLabelToMmdd(label) {
-    const match = String(label || "").trim().match(/^(\d{2})\/(\d{2})/);
-    if (!match) return null;
-    return Number(match[1]) * 100 + Number(match[2]);
-  }
-
   function compactDateLabel(label) {
     const match = String(label || "").trim().match(/^(\d{2}\/\d{2})/);
     return match ? match[1] : String(label || "").trim();
   }
 
-  function visibleCutoffMmdd() {
-    const targetKey =
-      window.CGV_WATCHER_TARGET ||
-      localStorage.getItem("cgv-watcher-selected-target-v1") ||
-      "odyssey_imax";
-    return TARGET_VISIBLE_MMDD[targetKey] ?? DEFAULT_VISIBLE_MMDD;
-  }
-
   function applyDateMoreToggles() {
     ensureDateMoreStyles();
-    const cutoffMmdd = visibleCutoffMmdd();
 
     document.querySelectorAll(".theater-card .result-list").forEach((list) => {
       const rows = Array.from(list.children).filter((node) =>
@@ -201,7 +182,7 @@ localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
       );
       if (!rows.length) return;
 
-      const signature = `${cutoffMmdd}|${rows
+      const signature = `${VISIBLE_DATE_COUNT}|${rows
         .map((row) => row.querySelector(".result-date")?.textContent?.trim() || "")
         .join("|")}`;
       if (list.dataset.dateMoreSignature === signature) return;
@@ -213,11 +194,7 @@ localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
         row.classList.remove("result-extra-row");
       });
 
-      const extraRows = rows.filter((row) => {
-        const label = row.querySelector(".result-date")?.textContent;
-        const mmdd = dateLabelToMmdd(label);
-        return mmdd !== null && mmdd > cutoffMmdd;
-      });
+      const extraRows = rows.slice(VISIBLE_DATE_COUNT);
 
       if (!extraRows.length) return;
 
