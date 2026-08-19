@@ -28,13 +28,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          curl --fail-with-body \
-            --request POST \
-            --header "Accept: application/vnd.github+json" \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/subscriber-mailer.yml/dispatches" \
-            --data '{"ref":"main"}'
+          echo "Starting the continuous subscriber mailer."
+
+          for attempt in 1 2 3 4 5 6; do
+            echo "Dispatch attempt ${attempt}/6"
+
+            if curl --fail-with-body \
+              --request POST \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/subscriber-mailer.yml/dispatches" \
+              --data '{"ref":"main"}'; then
+              echo "Subscriber mailer started successfully."
+              exit 0
+            fi
+
+            if [ "$attempt" -lt 6 ]; then
+              echo "Dispatch failed. Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+
+          echo "ERROR: Failed to start subscriber mailer after 6 attempts."
+          exit 1
 
   mailer:
     if: github.event_name == 'workflow_dispatch'
