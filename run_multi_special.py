@@ -38,8 +38,8 @@ TARGETS = (
         movie_keyword="오디세이",
         movie_no="30001323",
         format_name="IMAX",
-        date_from=date(2026, 8, 25),
-        date_to=date(2026, 9, 7),
+        date_from=date(2026, 8, 31),
+        date_to=date(2026, 9, 14),
     ),
     Target(
         key="spiderman_screenx",
@@ -47,8 +47,8 @@ TARGETS = (
         movie_keyword="스파이더맨-브랜드 뉴 데이",
         movie_no="30001192",
         format_name="SCREENX",
-        date_from=date(2026, 8, 19),
-        date_to=date(2026, 9, 7),
+        date_from=date(2026, 8, 25),
+        date_to=date(2026, 9, 8),
     ),
 )
 
