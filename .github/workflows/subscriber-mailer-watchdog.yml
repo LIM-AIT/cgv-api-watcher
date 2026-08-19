@@ -1,0 +1,114 @@
+name: CGV Subscriber Mailer Watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run away from the top of the hour to reduce schedule congestion.
+    - cron: "2-57/5 * * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: cgv-subscriber-mailer-watchdog
+  cancel-in-progress: true
+
+jobs:
+  ensure-mailer-running:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check subscriber mailer health and recover if stopped
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_PATH: subscriber-mailer.yml
+          HANDOFF_GRACE_SECONDS: "180"
+        run: |
+          set -euo pipefail
+
+          api_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_PATH}/runs?per_page=20"
+
+          curl --fail-with-body --silent --show-error \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${api_url}" \
+            --output /tmp/subscriber-mailer-runs.json
+
+          decision=$(python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+
+          with open("/tmp/subscriber-mailer-runs.json", encoding="utf-8") as fh:
+              payload = json.load(fh)
+
+          runs = payload.get("workflow_runs") or []
+          active_statuses = {
+              "queued",
+              "in_progress",
+              "requested",
+              "waiting",
+              "pending",
+          }
+
+          active = [run for run in runs if run.get("status") in active_statuses]
+          if active:
+              print("healthy")
+              raise SystemExit
+
+          if not runs:
+              print("restart")
+              raise SystemExit
+
+          last_updated = runs[0].get("updated_at")
+          if not last_updated:
+              print("restart")
+              raise SystemExit
+
+          updated_at = datetime.fromisoformat(last_updated.replace("Z", "+00:00"))
+          age_seconds = (datetime.now(timezone.utc) - updated_at).total_seconds()
+          grace_seconds = int(os.environ["HANDOFF_GRACE_SECONDS"])
+
+          print("grace" if age_seconds < grace_seconds else "restart")
+          PY
+          )
+
+          echo "Watchdog decision: ${decision}"
+
+          if [ "${decision}" = "healthy" ]; then
+            echo "Subscriber mailer is already active. No action required."
+            exit 0
+          fi
+
+          if [ "${decision}" = "grace" ]; then
+            echo "Subscriber mailer recently stopped; allowing the normal self-dispatch handoff to finish."
+            exit 0
+          fi
+
+          echo "Subscriber mailer has no active run after the handoff grace period. Starting recovery."
+
+          dispatch_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW_PATH}/dispatches"
+
+          for attempt in 1 2 3 4 5 6; do
+            echo "Recovery dispatch attempt ${attempt}/6"
+
+            if curl --fail-with-body --silent --show-error \
+              --request POST \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer ${GH_TOKEN}" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "${dispatch_url}" \
+              --data '{"ref":"main"}'; then
+              echo "Subscriber mailer recovery dispatch succeeded."
+              exit 0
+            fi
+
+            if [ "${attempt}" -lt 6 ]; then
+              echo "Recovery dispatch failed. Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+
+          echo "ERROR: Subscriber mailer watchdog could not restart the mailer after 6 attempts."
+          exit 1
