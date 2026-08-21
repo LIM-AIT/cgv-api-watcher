@@ -1,8 +1,8 @@
 {
   "service": "CGV WATCHER",
   "status": "RUNNING",
-  "checked_at": "2026-08-21T16:55:58+09:00",
-  "checked_at_display": "2026-08-21 16:55:58 KST",
+  "checked_at": "2026-08-21T16:58:27+09:00",
+  "checked_at_display": "2026-08-21 16:58:27 KST",
   "default_target": "odyssey_imax",
   "movie_keyword": "오디세이",
   "display_name": "The Odyssey",
@@ -17,13 +17,13 @@
       "results": [
         {
           "date": "2026-08-31",
-          "movie_found": false,
+          "movie_found": true,
           "format_open": false,
           "format_count": 0,
-          "movie_name": "",
+          "movie_name": "오디세이",
           "format_name": "IMAX",
           "error": "",
-          "status": "NO_SCHEDULE",
+          "status": "WAIT",
           "booking_url": "",
           "imax_open": false,
           "imax_count": 0
@@ -433,13 +433,13 @@
           "results": [
             {
               "date": "2026-08-31",
-              "movie_found": false,
+              "movie_found": true,
               "format_open": false,
               "format_count": 0,
-              "movie_name": "",
+              "movie_name": "오디세이",
               "format_name": "IMAX",
               "error": "",
-              "status": "NO_SCHEDULE",
+              "status": "WAIT",
               "booking_url": "",
               "imax_open": false,
               "imax_count": 0
@@ -927,13 +927,13 @@
             },
             {
               "date": "2026-08-31",
-              "movie_found": false,
+              "movie_found": true,
               "format_open": false,
               "format_count": 0,
-              "movie_name": "",
+              "movie_name": "스파이더맨-브랜드 뉴 데이",
               "format_name": "SCREENX",
               "error": "",
-              "status": "NO_SCHEDULE",
+              "status": "WAIT",
               "booking_url": "",
               "imax_open": false,
               "imax_count": 0
