@@ -1,8 +1,8 @@
 {
   "service": "CGV WATCHER",
   "status": "RUNNING",
-  "checked_at": "2026-08-22T11:58:37+09:00",
-  "checked_at_display": "2026-08-22 11:58:37 KST",
+  "checked_at": "2026-08-22T12:01:06+09:00",
+  "checked_at_display": "2026-08-22 12:01:06 KST",
   "default_target": "odyssey_imax",
   "movie_keyword": "오디세이",
   "display_name": "The Odyssey",
@@ -863,15 +863,15 @@
             {
               "date": "2026-08-26",
               "movie_found": true,
-              "format_open": false,
-              "format_count": 0,
+              "format_open": true,
+              "format_count": 11,
               "movie_name": "스파이더맨-브랜드 뉴 데이",
               "format_name": "SCREENX",
               "error": "",
-              "status": "WAIT",
-              "booking_url": "",
-              "imax_open": false,
-              "imax_count": 0
+              "status": "OPEN",
+              "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001192&scnSseq=1&scnYmd=20260826&scnsNo=004&siteNm=CGV+%EC%9A%A9%EC%82%B0%EC%95%84%EC%9D%B4%ED%8C%8C%ED%81%AC%EB%AA%B0&siteNo=0013",
+              "imax_open": true,
+              "imax_count": 11
             },
             {
               "date": "2026-08-27",
