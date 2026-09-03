@@ -1,8 +1,8 @@
 {
   "service": "CGV WATCHER",
   "status": "OPEN",
-  "checked_at": "2026-09-04T07:13:46+09:00",
-  "checked_at_display": "2026-09-04 07:13:46 KST",
+  "checked_at": "2026-09-04T07:16:16+09:00",
+  "checked_at_display": "2026-09-04 07:16:16 KST",
   "default_target": "odyssey_imax",
   "movie_keyword": "오디세이",
   "display_name": "The Odyssey",
@@ -273,14 +273,14 @@
           "date": "2026-09-04",
           "movie_found": true,
           "format_open": true,
-          "format_count": 6,
+          "format_count": 5,
           "movie_name": "오디세이",
           "format_name": "아이맥스",
           "error": "",
           "status": "OPEN",
-          "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001323&scnSseq=1&scnYmd=20260904&scnsNo=017&siteNm=CGV+%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
+          "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001323&scnSseq=2&scnYmd=20260904&scnsNo=017&siteNm=CGV+%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
           "imax_open": true,
-          "imax_count": 6
+          "imax_count": 5
         },
         {
           "date": "2026-09-05",
@@ -689,14 +689,14 @@
               "date": "2026-09-04",
               "movie_found": true,
               "format_open": true,
-              "format_count": 6,
+              "format_count": 5,
               "movie_name": "오디세이",
               "format_name": "아이맥스",
               "error": "",
               "status": "OPEN",
-              "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001323&scnSseq=1&scnYmd=20260904&scnsNo=017&siteNm=CGV+%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
+              "booking_url": "https://cgv.co.kr/cnm/movieBook/movie?movNo=30001323&scnSseq=2&scnYmd=20260904&scnsNo=017&siteNm=CGV+%EC%98%81%EB%93%B1%ED%8F%AC%ED%83%80%EC%9E%84%EC%8A%A4%ED%80%98%EC%96%B4&siteNo=0059",
               "imax_open": true,
-              "imax_count": 6
+              "imax_count": 5
             },
             {
               "date": "2026-09-05",
