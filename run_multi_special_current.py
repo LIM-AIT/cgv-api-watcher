@@ -12,7 +12,7 @@ ODYSSEY = base.Target(
     movie_no="30001323",
     format_name="IMAX",
     date_from=date(2026, 9, 16),
-    date_to=date(2026, 9, 17),
+    date_to=date(2026, 9, 27),
 )
 
 # Keep the existing target key so subscriber preferences remain compatible,
@@ -54,7 +54,7 @@ def main() -> int:
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print("Current targets applied: Odyssey 2026-09-16~17 / SCREENX upcoming")
+    print("Current targets applied: Odyssey 2026-09-16~27 / SCREENX upcoming")
     return 0
 
 
