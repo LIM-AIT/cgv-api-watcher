@@ -141,7 +141,7 @@ jobs:
           MAIL_TO: ${{ secrets.MAIL_TO }}
           THEATERS: ${{ secrets.THEATERS }}
           DATE_FROM: "2026-09-16"
-          DATE_TO: "2026-09-17"
+          DATE_TO: "2026-09-27"
           MOVIE_KEYWORD: "오디세이"
           INTERVAL_SECONDS: "150"
           REQUEST_TIMEOUT_SECONDS: "20"
@@ -167,7 +167,7 @@ jobs:
               echo "The multi-target status exporter will still be attempted."
             fi
 
-            # Current status: Odyssey 09/16~09/17; SCREENX slot is update-pending.
+            # Current status: Odyssey 09/16~09/27; SCREENX slot is update-pending.
             python run_multi_special_current.py
             multi_exit=$?
 
