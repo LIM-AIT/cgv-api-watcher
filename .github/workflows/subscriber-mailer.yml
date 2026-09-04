@@ -84,7 +84,7 @@ jobs:
         run: |
           set +e
 
-          # v3.3: protected mailer reads + deduplication + past-date alert guard.
+          # v3.4: protected reads + past-date guard + one alert per event key.
           # 30초 간격 × 600회 = 약 5시간
           for cycle in $(seq 1 600); do
             cycle_started=$(date +%s)
