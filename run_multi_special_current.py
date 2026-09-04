@@ -1,7 +1,8 @@
+import importlib
 import json
 from datetime import date
 
-import run_multi_special as base
+base = importlib.import_module("run_multi_special")
 
 
 ODYSSEY = base.Target(
