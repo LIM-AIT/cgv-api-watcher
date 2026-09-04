@@ -23,7 +23,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Restarting CGV watcher with the latest movie/date configuration."
+          echo "Restarting CGV watcher with Odyssey monitoring through 2026-09-27."
           curl --fail-with-body \
             --request POST \
             --header "Accept: application/vnd.github+json" \
