@@ -139,7 +139,7 @@ jobs:
           SMTP_USER: ${{ secrets.SMTP_USER }}
           SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
           MAIL_TO: ${{ secrets.MAIL_TO }}
-          THEATERS: ${{ secrets.THEATERS }}
+          THEATERS: "용산아이파크몰:0013"
           DATE_FROM: "2026-09-16"
           DATE_TO: "2026-09-27"
           MOVIE_KEYWORD: "오디세이"
@@ -167,7 +167,7 @@ jobs:
               echo "The multi-target status exporter will still be attempted."
             fi
 
-            # Current status: Odyssey 09/16~09/27; SCREENX slot is update-pending.
+            # Current status: Odyssey Yongsan only, 09/16~09/27; SCREENX update-pending.
             python run_multi_special_current.py
             multi_exit=$?
 
