@@ -162,6 +162,71 @@ def reserve_management_notice(
     )
 
 
+def reserve_delivery_claim(
+    session: requests.Session,
+    base_url: str,
+    mailer_secret: str,
+    subscription: mailer.Subscription,
+    recipient: str,
+    event: mailer.OpenEvent,
+) -> bool:
+    return mailer.call_rpc(
+        session,
+        base_url,
+        "reserve_cgv_email_delivery_claim",
+        {
+            "p_mailer_secret": mailer_secret,
+            "p_id": subscription.id,
+            "p_token": subscription.token,
+            "p_email_fingerprint": email_fingerprint(recipient),
+            "p_event_key": event.event_key,
+            "p_event_signature": event.signature,
+        },
+    )
+
+
+def mark_delivery_claim_sent(
+    session: requests.Session,
+    base_url: str,
+    mailer_secret: str,
+    recipient: str,
+    event: mailer.OpenEvent,
+) -> bool:
+    return mailer.call_rpc(
+        session,
+        base_url,
+        "mark_cgv_email_delivery_claim_sent",
+        {
+            "p_mailer_secret": mailer_secret,
+            "p_email_fingerprint": email_fingerprint(recipient),
+            "p_event_key": event.event_key,
+            "p_event_signature": event.signature,
+        },
+    )
+
+
+def mark_delivery_claim_failed(
+    session: requests.Session,
+    base_url: str,
+    mailer_secret: str,
+    recipient: str,
+    event: mailer.OpenEvent,
+    reason: str,
+) -> bool:
+    return mailer.call_rpc(
+        session,
+        base_url,
+        "mark_cgv_email_delivery_claim_failed",
+        {
+            "p_mailer_secret": mailer_secret,
+            "p_email_fingerprint": email_fingerprint(recipient),
+            "p_event_key": event.event_key,
+            "p_event_signature": event.signature,
+            "p_failure_reason": reason,
+        },
+    )
+
+
 def collect_duplicate_requests(
     session: requests.Session,
     base_url: str,
@@ -316,6 +381,58 @@ def management_message(
     return message
 
 
+def digest_alert_message(
+    sender: str,
+    recipient: str,
+    events: list[mailer.OpenEvent],
+) -> EmailMessage:
+    ordered = sorted(
+        events,
+        key=lambda event: (
+            event.target_date,
+            event.theater_name,
+            event.target_key,
+            event.event_key,
+        ),
+    )
+    message = EmailMessage()
+    message["From"] = sender
+    message["To"] = recipient
+    message["Subject"] = f"[CGV WATCHER] 예매 오픈 {len(ordered)}건"
+
+    lines = [
+        "CGV 특별관 예매 오픈 알림입니다.",
+        "동시에 확인된 여러 일정은 한 통으로 묶어 안내합니다.",
+        "",
+    ]
+    for event in ordered:
+        label = mailer.TARGET_LABELS.get(
+            event.target_key,
+            f"{event.movie_name} · {event.format_name}",
+        )
+        lines.extend(
+            [
+                f"- {mailer.format_date_label(event.target_date)} | "
+                f"{event.theater_name} | {label}",
+                f"  {mailer.event_booking_url(event)}",
+            ]
+        )
+
+    dashboard = mailer.env(
+        "DASHBOARD_URL",
+        mailer.DEFAULT_DASHBOARD_URL,
+    ).rstrip("/") + "/"
+    lines.extend(
+        [
+            "",
+            "자동 예매가 아닌 오픈 감지 알림입니다.",
+            f"알림 설정 관리: {dashboard}",
+        ]
+    )
+    message.set_content("\n".join(lines))
+    return message
+
+
 def subscription_status(
     session: requests.Session,
     base_url: str,
@@ -351,10 +468,10 @@ def main() -> int:
     session, base_url = mailer.supabase_session()
     try:
         initial_rows = fetch_subscription_rows(
-    session,
-    base_url,
-    mailer_secret,
-)
+            session,
+            base_url,
+            mailer_secret,
+        )
         duplicate_requests = collect_duplicate_requests(
             session,
             base_url,
@@ -364,10 +481,10 @@ def main() -> int:
         )
 
         rows = fetch_subscription_rows(
-    session,
-    base_url,
-    mailer_secret,
-)
+            session,
+            base_url,
+            mailer_secret,
+        )
         subscriptions = build_subscriptions(
             session,
             base_url,
@@ -405,18 +522,19 @@ def main() -> int:
         ]
         events = mailer.fetch_open_events(session, base_url)
         deliveries = fetch_deliveries(
-    session,
-    base_url,
-    mailer_secret,
-)
+            session,
+            base_url,
+            mailer_secret,
+        )
 
         verified_by_email: dict[str, list[mailer.Subscription]] = defaultdict(list)
         for sub in verified:
             verified_by_email[sub.email].append(sub)
 
-        alert_jobs: list[
-            tuple[str, mailer.OpenEvent, list[mailer.Subscription]]
-        ] = []
+        alert_jobs: dict[
+            str,
+            list[tuple[mailer.OpenEvent, list[mailer.Subscription]]],
+        ] = defaultdict(list)
         for email, email_subscriptions in verified_by_email.items():
             for event in events:
                 eligible = [
@@ -432,7 +550,7 @@ def main() -> int:
                     not in deliveries
                 ]
                 if eligible:
-                    alert_jobs.append((email, event, eligible))
+                    alert_jobs[email].append((event, eligible))
 
         if not pending and not management_jobs and not alert_jobs:
             print(
@@ -447,7 +565,9 @@ def main() -> int:
         smtp_port = int(mailer.env("SMTP_PORT", "465"))
         confirmation_count = 0
         management_count = 0
-        alert_count = 0
+        alert_email_count = 0
+        alert_event_count = 0
+        suppressed_duplicate_count = 0
 
         with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=30) as smtp:
             smtp.login(sender, password)
@@ -478,43 +598,108 @@ def main() -> int:
                     )
                 management_count += 1
 
-            for recipient, event, eligible in alert_jobs:
-                target_subscriptions = [
-                    sub
-                    for sub in verified_by_email[recipient]
-                    if event.target_key in sub.targets
-                ]
-                smtp.send_message(
-                    mailer.alert_message(
-                        sender,
-                        recipient,
-                        event,
-                        target_subscriptions,
-                    )
-                )
+            for recipient, candidates in alert_jobs.items():
+                reserved: list[
+                    tuple[mailer.OpenEvent, list[mailer.Subscription]]
+                ] = []
 
-                for sub in eligible:
-                    if mailer.call_rpc(
+                for event, eligible in candidates:
+                    representative = eligible[0]
+                    if reserve_delivery_claim(
                         session,
                         base_url,
-                        "record_cgv_email_delivery",
-                        {
-                            "p_id": sub.id,
-                            "p_token": sub.token,
-                            "p_event_key": event.event_key,
-                            "p_event_signature": event.signature,
-                        },
+                        mailer_secret,
+                        representative,
+                        recipient,
+                        event,
                     ):
-                        deliveries.add(
-                            (sub.id, event.event_key, event.signature)
+                        reserved.append((event, eligible))
+                    else:
+                        suppressed_duplicate_count += 1
+
+                if not reserved:
+                    continue
+
+                reserved_events = [event for event, _ in reserved]
+                try:
+                    if len(reserved_events) == 1:
+                        event = reserved_events[0]
+                        target_subscriptions = [
+                            sub
+                            for sub in verified_by_email[recipient]
+                            if event.target_key in sub.targets
+                        ]
+                        message = mailer.alert_message(
+                            sender,
+                            recipient,
+                            event,
+                            target_subscriptions,
                         )
-                alert_count += 1
+                    else:
+                        message = digest_alert_message(
+                            sender,
+                            recipient,
+                            reserved_events,
+                        )
+                    smtp.send_message(message)
+                except Exception as exc:
+                    reason = f"{type(exc).__name__}: {exc}"
+                    for event, _ in reserved:
+                        mark_delivery_claim_failed(
+                            session,
+                            base_url,
+                            mailer_secret,
+                            recipient,
+                            event,
+                            reason,
+                        )
+                    print(
+                        "Subscriber alert send failed after reservation; "
+                        "automatic retry suppressed to prevent duplicates: "
+                        f"{type(exc).__name__}"
+                    )
+                    continue
+
+                alert_email_count += 1
+                alert_event_count += len(reserved)
+
+                for event, eligible in reserved:
+                    if not mark_delivery_claim_sent(
+                        session,
+                        base_url,
+                        mailer_secret,
+                        recipient,
+                        event,
+                    ):
+                        print(
+                            "WARNING: delivery claim completion failed; "
+                            "reservation remains and still blocks duplicate send: "
+                            f"{event.event_key}"
+                        )
+
+                    for sub in eligible:
+                        if mailer.call_rpc(
+                            session,
+                            base_url,
+                            "record_cgv_email_delivery",
+                            {
+                                "p_id": sub.id,
+                                "p_token": sub.token,
+                                "p_event_key": event.event_key,
+                                "p_event_signature": event.signature,
+                            },
+                        ):
+                            deliveries.add(
+                                (sub.id, event.event_key, event.signature)
+                            )
 
         print(
             "Subscriber mailer complete: "
             f"confirmations={confirmation_count}, "
             f"management={management_count}, "
-            f"alerts={alert_count}, "
+            f"alert_emails={alert_email_count}, "
+            f"alert_events={alert_event_count}, "
+            f"duplicate_claims_suppressed={suppressed_duplicate_count}, "
             f"verified={len(verified)}, "
             f"currently_open={len(events)}"
         )
