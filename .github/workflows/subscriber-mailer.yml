@@ -13,131 +13,15 @@ permissions:
   contents: read
 
 concurrency:
-  # Keep exactly one subscriber mailer session alive. A workflow-file push
-  # replaces the currently running session so production code updates take
-  # effect immediately; normal self-dispatches queue without cancelling.
+  # A workflow-file push cancels any currently running subscriber mailer.
   group: cgv-subscriber-mailer-workflow_dispatch
   cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
-  start-mailer:
-    if: github.event_name == 'push'
+  paused:
     runs-on: ubuntu-latest
     steps:
-      - name: Start continuous subscriber mailer
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Subscriber alerts paused
         run: |
-          echo "Starting the continuous subscriber mailer."
-
-          for attempt in 1 2 3 4 5 6; do
-            echo "Dispatch attempt ${attempt}/6"
-
-            if curl --fail-with-body \
-              --request POST \
-              --header "Accept: application/vnd.github+json" \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/subscriber-mailer.yml/dispatches" \
-              --data '{"ref":"main"}'; then
-              echo "Subscriber mailer started successfully."
-              exit 0
-            fi
-
-            if [ "$attempt" -lt 6 ]; then
-              echo "Dispatch failed. Retrying in 15 seconds..."
-              sleep 15
-            fi
-          done
-
-          echo "ERROR: Failed to start subscriber mailer after 6 attempts."
-          exit 1
-
-  mailer:
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    timeout-minutes: 350
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run continuous subscriber mailer
-        env:
-          SMTP_USER: ${{ secrets.SMTP_USER }}
-          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
-          SMTP_HOST: "smtp.gmail.com"
-          SMTP_PORT: "465"
-          SUPABASE_URL: "https://yxrfarlhcyaaslwmdyww.supabase.co"
-          STATUS_URL: "https://raw.githubusercontent.com/LIM-AIT/cgv-api-watcher/main/docs/status.json"
-          DASHBOARD_URL: "https://lim-ait.github.io/cgv-api-watcher/"
-        run: |
-          set +e
-
-          # v3.4: protected reads + past-date guard + one alert per event key.
-          # 30초 간격 × 600회 = 약 5시간
-          for cycle in $(seq 1 600); do
-            cycle_started=$(date +%s)
-
-            echo "========================================"
-            echo "Subscriber mailer cycle ${cycle}/600"
-            echo "Started at: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-            echo "========================================"
-
-            python run_subscriber_mailer.py
-            mailer_exit=$?
-
-            if [ "$mailer_exit" -ne 0 ]; then
-              echo "Subscriber mailer failed with exit code ${mailer_exit}."
-              echo "The next cycle will continue."
-            fi
-
-            cycle_finished=$(date +%s)
-            elapsed=$((cycle_finished - cycle_started))
-            sleep_seconds=$((30 - elapsed))
-
-            if [ "$cycle" -lt 600 ] && [ "$sleep_seconds" -gt 0 ]; then
-              echo "Next subscriber check in ${sleep_seconds} seconds."
-              sleep "$sleep_seconds"
-            fi
-          done
-
-      - name: Start next subscriber mailer session
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          echo "Starting the next subscriber mailer session."
-
-          for attempt in 1 2 3 4 5 6; do
-            echo "Dispatch attempt ${attempt}/6"
-
-            if curl --fail-with-body \
-              --request POST \
-              --header "Accept: application/vnd.github+json" \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/workflows/subscriber-mailer.yml/dispatches" \
-              --data '{"ref":"main"}'; then
-              echo "Next subscriber mailer session started successfully."
-              exit 0
-            fi
-
-            if [ "$attempt" -lt 6 ]; then
-              echo "Dispatch failed. Retrying in 15 seconds..."
-              sleep 15
-            fi
-          done
-
-          echo "ERROR: Failed to start next subscriber mailer session after 6 attempts."
-          exit 1
+          echo "CGV subscriber email alerts are paused."
+          echo "No subscriber emails will be sent and no self-dispatch will occur."
