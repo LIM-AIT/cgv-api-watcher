@@ -3,6 +3,7 @@
   const DEFAULT_TARGET = "odyssey_imax";
   const TARGET_LABELS = {
     odyssey_imax: "오디세이",
+    possible_love_any: "가능한 사랑",
     spiderman_screenx: "스파이더맨",
   };
   const RAW_STATUS_URL =
@@ -124,7 +125,7 @@ let selectedTarget =
       title.innerHTML = `
         <span class="movie-selector-label">영화 선택 :</span>
         <button type="button" class="movie-select-button" data-target="odyssey_imax">오디세이</button>
-        <button type="button" class="movie-select-button" data-target="spiderman_screenx">스파이더맨</button>
+        <button type="button" class="movie-select-button" data-target="possible_love_any">가능한 사랑</button>
       `;
       title.querySelectorAll(".movie-select-button").forEach((button) => {
         button.addEventListener("click", () => selectMovie(button.dataset.target));
