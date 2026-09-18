@@ -27,7 +27,7 @@ localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
   );
   ensureModuleAsset(
     MOVIE_SWITCHER_ASSET_ID,
-    "./movie-switcher.js?v=3",
+    "./movie-switcher.js?v=4",
   );
 
   function placeInteractiveSections() {
