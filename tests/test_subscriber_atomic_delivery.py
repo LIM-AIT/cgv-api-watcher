@@ -110,3 +110,42 @@ def test_failed_claim_is_marked_without_release(monkeypatch):
     assert calls[0][0] == "mark_cgv_email_delivery_claim_failed"
     assert calls[0][1]["p_event_key"] == event.event_key
     assert "ambiguous send result" in calls[0][1]["p_failure_reason"]
+
+
+def test_any_format_alert_uses_generic_cgv_subject():
+    event = mailer.OpenEvent(
+        target_key="possible_love_any",
+        format_name="전체 포맷",
+        movie_no="",
+        movie_keyword="가능한 사랑",
+        event_key="possible_love_any|0013|2026-09-23|전체 포맷",
+        signature="b" * 64,
+        opened_at="2026-09-18T00:00:00+00:00",
+        theater_name="용산아이파크몰",
+        site_no="0013",
+        target_date="2026-09-23",
+        movie_name="가능한 사랑",
+        booking_url="https://example.com/possible-love",
+    )
+    sub = mailer.Subscription(
+        id="sub-any",
+        email="user@example.com",
+        token="token",
+        verified=True,
+        verified_at="2026-09-01T00:00:00+00:00",
+        confirmation_sent_at="2026-09-01T00:00:01+00:00",
+        targets=frozenset({"possible_love_any"}),
+    )
+
+    message = mailer.alert_message(
+        "sender@example.com",
+        "user@example.com",
+        event,
+        [sub],
+    )
+
+    assert message["Subject"] == "[CGV 예매 오픈] 09/23(수) 용산아이파크몰"
+    body = message.get_content()
+    assert "CGV 예매가 새로 열렸습니다." in body
+    assert "감지 조건: 포맷 제한 없음" in body
+    assert "CGV 전체 포맷" not in body
