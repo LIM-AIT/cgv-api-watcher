@@ -70,13 +70,21 @@ def test_digest_combines_multiple_open_dates_into_one_message():
         "sender@example.com",
         "user@example.com",
         [second, first],
+        [make_subscription("sub-a")],
     )
 
     assert message["To"] == "user@example.com"
-    assert message["Subject"] == "[CGV WATCHER] 예매 오픈 2건"
+    assert message["Subject"] == (
+        "[CGV IMAX 오픈] 09/16(수) 외 1건 용산아이파크몰"
+    )
     body = message.get_content()
-    assert "09/16" in body
-    assert "09/17" in body
+    assert "CGV IMAX 예매가 새로 열렸습니다." in body
+    assert "극장: 용산아이파크몰" in body
+    assert "날짜: 09/16(수), 09/17(목)" in body
+    assert "영화: The Odyssey" in body
+    assert "포맷: IMAX" in body
+    assert "오디세이 · IMAX 바로 예매하기:" in body
+    assert "오디세이 · IMAX 알림만 해지:" in body
     assert body.count("https://example.com/book") == 2
 
 
