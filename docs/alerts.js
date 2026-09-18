@@ -21,7 +21,7 @@ const TARGETS = {
   possible_love_any: {
     label: "가능한 사랑",
     format: "전체 포맷",
-    addButtonLabel: "전상영관 알림 추가",
+    addButtonLabel: "전체 상영관 알림 추가",
     title: "🔔 가능한 사랑 오픈 메일 알림",
     description:
       "이메일을 등록하면 가능한 사랑의 CGV 예매 회차가 포맷과 관계없이 처음 열렸을 때 알림을 보내드립니다.",
