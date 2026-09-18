@@ -1,6 +1,6 @@
 (() => {
   const STORAGE_KEY = "cgv-watcher-selected-target-v1";
-  const DEFAULT_TARGET = "odyssey_imax";
+  const DEFAULT_TARGET = "possible_love_any";
   const TARGET_LABELS = {
     odyssey_imax: "오디세이",
     possible_love_any: "가능한 사랑",
@@ -124,8 +124,8 @@ let selectedTarget =
       title.classList.add("movie-selector-title");
       title.innerHTML = `
         <span class="movie-selector-label">영화 선택 :</span>
-        <button type="button" class="movie-select-button" data-target="odyssey_imax">오디세이</button>
         <button type="button" class="movie-select-button" data-target="possible_love_any">가능한 사랑</button>
+        <button type="button" class="movie-select-button" data-target="odyssey_imax">오디세이</button>
       `;
       title.querySelectorAll(".movie-select-button").forEach((button) => {
         button.addEventListener("click", () => selectMovie(button.dataset.target));
