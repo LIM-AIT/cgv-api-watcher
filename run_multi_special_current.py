@@ -15,6 +15,17 @@ ODYSSEY = base.Target(
     date_to=date(2026, 9, 27),
 )
 
+POSSIBLE_LOVE = base.Target(
+    key="possible_love_any",
+    display_name="가능한 사랑",
+    movie_keyword="가능한 사랑",
+    movie_no="",
+    format_name="전체 포맷",
+    date_from=date(2026, 9, 23),
+    date_to=date(2026, 10, 7),
+    match_mode="ANY",
+)
+
 # Keep the existing target key so subscriber preferences remain compatible,
 # but make the SCREENX slot query-free until the next movie is selected.
 SCREENX_UPCOMING = base.Target(
@@ -27,7 +38,7 @@ SCREENX_UPCOMING = base.Target(
     date_to=date(2099, 1, 1),
 )
 
-base.TARGETS = (ODYSSEY, SCREENX_UPCOMING)
+base.TARGETS = (ODYSSEY, POSSIBLE_LOVE, SCREENX_UPCOMING)
 
 
 def main() -> int:
@@ -54,7 +65,7 @@ def main() -> int:
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print("Current targets applied: Odyssey 2026-09-16~27 / SCREENX upcoming")
+    print("Current targets applied: Odyssey IMAX / Possible Love any format / SCREENX upcoming")
     return 0
 
 
