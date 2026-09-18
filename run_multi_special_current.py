@@ -13,6 +13,7 @@ ODYSSEY = base.Target(
     format_name="IMAX",
     date_from=date(2026, 9, 16),
     date_to=date(2026, 9, 27),
+    theater_site_nos=("0013",),
 )
 
 POSSIBLE_LOVE = base.Target(
@@ -24,6 +25,7 @@ POSSIBLE_LOVE = base.Target(
     date_from=date(2026, 9, 23),
     date_to=date(2026, 10, 7),
     match_mode="ANY",
+    theater_site_nos=("0013", "0059"),
 )
 
 # Keep the existing target key so subscriber preferences remain compatible,
@@ -38,7 +40,7 @@ SCREENX_UPCOMING = base.Target(
     date_to=date(2099, 1, 1),
 )
 
-base.TARGETS = (ODYSSEY, POSSIBLE_LOVE, SCREENX_UPCOMING)
+base.TARGETS = (POSSIBLE_LOVE, ODYSSEY, SCREENX_UPCOMING)
 
 
 def main() -> int:
