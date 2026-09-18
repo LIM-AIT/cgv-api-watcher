@@ -5,6 +5,7 @@ const SUPABASE_PUBLISHABLE_KEY =
   "sb_publishable_XPhr82oODoaWs_uYrWiXGg_Y1ypkJmC";
 const TARGET_LABELS = {
   odyssey_imax: "오디세이 · IMAX",
+  possible_love_any: "가능한 사랑",
   spiderman_screenx: "스파이더맨 · SCREENX",
 };
 
