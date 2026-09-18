@@ -30,6 +30,7 @@ DEFAULT_DASHBOARD_URL = "https://lim-ait.github.io/cgv-api-watcher/"
 WEEKDAYS = ("월", "화", "수", "목", "금", "토", "일")
 TARGET_LABELS = {
     "odyssey_imax": "오디세이 · IMAX",
+    "possible_love_any": "가능한 사랑",
     "spiderman_screenx": "스파이더맨 · SCREENX",
 }
 
@@ -269,7 +270,8 @@ def fetch_open_events(
     details: dict[str, dict] = {}
 
     for target_key, target in status_targets(status).items():
-        format_name = str(target.get("format") or "IMAX").strip().upper()
+        format_name = str(target.get("format") or "IMAX").strip()
+        match_mode = str(target.get("match_mode") or "FORMAT").strip().upper()
         movie_keyword = str(target.get("movie_keyword") or "").strip()
         movie_no = str(target.get("movie_no") or "").strip()
 
@@ -302,9 +304,17 @@ def fetch_open_events(
                 ).strip()
 
                 observations.append({"event_key": event_key, "is_open": is_open})
+                display_format_name = str(
+                    result.get("format_name") or format_name
+                ).strip()
+
                 details[event_key] = {
                     "target_key": target_key,
-                    "format_name": format_name,
+                    "format_name": (
+                        display_format_name
+                        if match_mode == "ANY"
+                        else format_name
+                    ),
                     "movie_no": movie_no,
                     "movie_keyword": movie_keyword,
                     "is_open": is_open,
@@ -459,15 +469,27 @@ def alert_message(
     message = EmailMessage()
     message["From"] = sender
     message["To"] = recipient
-    message["Subject"] = (
-        f"[CGV {event.format_name} 오픈] {date_label} {event.theater_name}"
-    )
+
+    any_format = event.format_name == "전체 포맷"
+    if any_format:
+        message["Subject"] = (
+            f"[CGV 예매 오픈] {date_label} {event.theater_name}"
+        )
+        opening_line = "CGV 예매가 새로 열렸습니다."
+        format_line = "감지 조건: 포맷 제한 없음"
+    else:
+        message["Subject"] = (
+            f"[CGV {event.format_name} 오픈] {date_label} {event.theater_name}"
+        )
+        opening_line = f"CGV {event.format_name} 예매가 새로 열렸습니다."
+        format_line = f"포맷: {event.format_name}"
+
     message.set_content(
-        f"CGV {event.format_name} 예매가 새로 열렸습니다.\n\n"
+        f"{opening_line}\n\n"
         f"극장: {event.theater_name}\n"
         f"날짜: {date_label}\n"
         f"영화: {event.movie_name}\n"
-        f"포맷: {event.format_name}\n\n"
+        f"{format_line}\n\n"
         "메일 알림 등록 이후 예매 가능 상태로 변경된 것이 확인되어 발송된 알림입니다.\n\n"
         f"{label} 바로 예매하기:\n"
         f"{booking_url}\n\n"
