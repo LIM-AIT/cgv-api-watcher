@@ -29,6 +29,7 @@ class Target:
     format_name: str
     date_from: date
     date_to: date
+    match_mode: str = "FORMAT"
 
 
 TARGETS = (
@@ -132,6 +133,9 @@ def format_text(item: dict[str, Any]) -> str:
 
 
 def format_matches(item: dict[str, Any], target: Target) -> bool:
+    if target.match_mode.strip().upper() == "ANY":
+        return True
+
     text = format_text(item)
     if target.format_name == "IMAX":
         grade_code = normalize(item.get("tcscnsGradCd"))
@@ -320,6 +324,7 @@ def main() -> int:
             "movie_keyword": target.movie_keyword,
             "movie_no": target.movie_no,
             "format": target.format_name,
+            "match_mode": target.match_mode.strip().upper(),
             "date_from": target.date_from.isoformat(),
             "date_to": target.date_to.isoformat(),
             "status": target_status(target_theaters),
