@@ -411,11 +411,18 @@ def digest_alert_message(
     message["To"] = recipient
 
     first_date = mailer.format_date_label(first.target_date)
+    any_format = same_format and first.format_name == "전체 포맷"
     if same_format and same_theater:
-        message["Subject"] = (
-            f"[CGV {first.format_name} 오픈] "
-            f"{first_date} 외 {len(ordered) - 1}건 {first.theater_name}"
-        )
+        if any_format:
+            message["Subject"] = (
+                f"[CGV 예매 오픈] "
+                f"{first_date} 외 {len(ordered) - 1}건 {first.theater_name}"
+            )
+        else:
+            message["Subject"] = (
+                f"[CGV {first.format_name} 오픈] "
+                f"{first_date} 외 {len(ordered) - 1}건 {first.theater_name}"
+            )
     else:
         message["Subject"] = f"[CGV WATCHER] 예매 오픈 {len(ordered)}건"
 
@@ -426,13 +433,24 @@ def digest_alert_message(
         mailer.format_date_label(event.target_date) for event in ordered
     )
 
+    opening_line = (
+        "CGV 예매가 새로 열렸습니다."
+        if any_format
+        else f"CGV {format_label} 예매가 새로 열렸습니다."
+    )
+    format_line = (
+        "감지 조건: 포맷 제한 없음"
+        if any_format
+        else f"포맷: {format_label}"
+    )
+
     lines = [
-        f"CGV {format_label} 예매가 새로 열렸습니다.",
+        opening_line,
         "",
         f"극장: {theater_label}",
         f"날짜: {date_labels}",
         f"영화: {movie_label}",
-        f"포맷: {format_label}",
+        format_line,
         "",
         "메일 알림 등록 이후 예매 가능 상태로 변경된 것이 확인되어 발송된 알림입니다.",
         "",
