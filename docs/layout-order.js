@@ -5,9 +5,9 @@
   const REACTION_LEADERBOARD_ASSET_ID = "reaction-leaderboard-asset-v1";
   const MOVIE_SWITCHER_ASSET_ID = "movie-switcher-asset-v1";
 const MOVIE_SELECTION_STORAGE_KEY = "cgv-watcher-selected-target-v1";
-const DEFAULT_MOVIE_TARGET = "odyssey_imax";
+const DEFAULT_MOVIE_TARGET = "possible_love_any";
 
-// A new page always starts on Odyssey. After initialization, the
+// A new page starts on Possible Love. After initialization, the
 // movie switcher owns the target state for the lifetime of the page.
 window.CGV_WATCHER_TARGET = DEFAULT_MOVIE_TARGET;
 localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
@@ -27,7 +27,7 @@ localStorage.setItem(MOVIE_SELECTION_STORAGE_KEY, DEFAULT_MOVIE_TARGET);
   );
   ensureModuleAsset(
     MOVIE_SWITCHER_ASSET_ID,
-    "./movie-switcher.js?v=4",
+    "./movie-switcher.js?v=5",
   );
 
   function placeInteractiveSections() {
