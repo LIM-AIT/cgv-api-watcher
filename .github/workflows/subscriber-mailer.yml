@@ -7,6 +7,9 @@ on:
       - main
     paths:
       - ".github/workflows/subscriber-mailer.yml"
+      - "run_subscriber_mailer.py"
+      - "src/cgv_imax_watcher/subscriber_mailer_targeted.py"
+      - "src/cgv_imax_watcher/subscriber_mailer_v3.py"
 
 permissions:
   actions: write
@@ -84,7 +87,7 @@ jobs:
         run: |
           set +e
 
-          # v4: atomic recipient+event claim, fail-closed retry suppression,
+          # v4.1: atomic recipient+event claim, legacy-style digest formatting,
           # past-date guard, and multi-event digest delivery.
           # 30초 간격 × 600회 = 약 5시간
           for cycle in $(seq 1 600); do
