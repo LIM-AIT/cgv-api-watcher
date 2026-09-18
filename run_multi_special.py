@@ -30,6 +30,7 @@ class Target:
     date_from: date
     date_to: date
     match_mode: str = "FORMAT"
+    theater_site_nos: tuple[str, ...] = ()
 
 
 TARGETS = (
@@ -304,7 +305,13 @@ def main() -> int:
     target_payloads: dict[str, dict[str, Any]] = {}
     for target in TARGETS:
         target_theaters: list[dict[str, Any]] = []
-        for theater in theaters:
+        target_source_theaters = [
+            theater
+            for theater in theaters
+            if not target.theater_site_nos
+            or theater["site_no"] in target.theater_site_nos
+        ]
+        for theater in target_source_theaters:
             results = []
             for day in target_dates(target):
                 items, error = cache[(theater["site_no"], day)]
@@ -332,13 +339,14 @@ def main() -> int:
         }
 
     now = datetime.now(KST)
-    default_target = target_payloads["odyssey_imax"]
+    default_target_key = TARGETS[0].key
+    default_target = target_payloads[default_target_key]
     payload = {
         "service": "CGV WATCHER",
         "status": default_target["status"],
         "checked_at": now.isoformat(timespec="seconds"),
         "checked_at_display": now.strftime("%Y-%m-%d %H:%M:%S KST"),
-        "default_target": "odyssey_imax",
+        "default_target": default_target_key,
         "movie_keyword": default_target["movie_keyword"],
         "display_name": default_target["display_name"],
         "format": default_target["format"],
