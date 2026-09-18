@@ -385,6 +385,7 @@ def digest_alert_message(
     sender: str,
     recipient: str,
     events: list[mailer.OpenEvent],
+    subscriptions: list[mailer.Subscription],
 ) -> EmailMessage:
     ordered = sorted(
         events,
@@ -395,43 +396,91 @@ def digest_alert_message(
             event.event_key,
         ),
     )
+    first = ordered[0]
+    formats = {event.format_name for event in ordered}
+    theaters = {event.theater_name for event in ordered}
+    movies = {event.movie_name for event in ordered}
+    target_keys = list(dict.fromkeys(event.target_key for event in ordered))
+
+    same_format = len(formats) == 1
+    same_theater = len(theaters) == 1
+    same_movie = len(movies) == 1
+
     message = EmailMessage()
     message["From"] = sender
     message["To"] = recipient
-    message["Subject"] = f"[CGV WATCHER] 예매 오픈 {len(ordered)}건"
+
+    first_date = mailer.format_date_label(first.target_date)
+    if same_format and same_theater:
+        message["Subject"] = (
+            f"[CGV {first.format_name} 오픈] "
+            f"{first_date} 외 {len(ordered) - 1}건 {first.theater_name}"
+        )
+    else:
+        message["Subject"] = f"[CGV WATCHER] 예매 오픈 {len(ordered)}건"
+
+    format_label = first.format_name if same_format else "특별관"
+    theater_label = first.theater_name if same_theater else "여러 극장"
+    movie_label = first.movie_name if same_movie else "여러 영화"
+    date_labels = ", ".join(
+        mailer.format_date_label(event.target_date) for event in ordered
+    )
 
     lines = [
-        "CGV 특별관 예매 오픈 알림입니다.",
-        "동시에 확인된 여러 일정은 한 통으로 묶어 안내합니다.",
+        f"CGV {format_label} 예매가 새로 열렸습니다.",
+        "",
+        f"극장: {theater_label}",
+        f"날짜: {date_labels}",
+        f"영화: {movie_label}",
+        f"포맷: {format_label}",
+        "",
+        "메일 알림 등록 이후 예매 가능 상태로 변경된 것이 확인되어 발송된 알림입니다.",
         "",
     ]
-    for event in ordered:
+
+    if len(target_keys) == 1:
         label = mailer.TARGET_LABELS.get(
-            event.target_key,
-            f"{event.movie_name} · {event.format_name}",
+            first.target_key,
+            f"{first.movie_name} · {first.format_name}",
         )
-        lines.extend(
-            [
-                f"- {mailer.format_date_label(event.target_date)} | "
-                f"{event.theater_name} | {label}",
-                f"  {mailer.event_booking_url(event)}",
-            ]
+    else:
+        label = "CGV 특별관"
+
+    lines.append(f"{label} 바로 예매하기:")
+    for event in ordered:
+        lines.append(
+            f"- {mailer.format_date_label(event.target_date)}: "
+            f"{mailer.event_booking_url(event)}"
         )
 
-    dashboard = mailer.env(
-        "DASHBOARD_URL",
-        mailer.DEFAULT_DASHBOARD_URL,
-    ).rstrip("/") + "/"
     lines.extend(
         [
             "",
             "자동 예매가 아닌 오픈 감지 알림입니다.",
-            f"알림 설정 관리: {dashboard}",
+            "링크를 열어 날짜와 회차를 직접 확인하고 예매하세요.",
         ]
     )
+
+    for target_key in target_keys:
+        target_subscriptions = [
+            sub for sub in subscriptions if target_key in sub.targets
+        ]
+        if not target_subscriptions:
+            continue
+        target_label = mailer.TARGET_LABELS.get(target_key, "CGV 특별관")
+        lines.extend(
+            [
+                "",
+                f"{target_label} 알림만 해지:",
+                mailer.target_unsubscribe_url(
+                    target_key,
+                    target_subscriptions,
+                ),
+            ]
+        )
+
     message.set_content("\n".join(lines))
     return message
-
 
 def subscription_status(
     session: requests.Session,
@@ -640,6 +689,7 @@ def main() -> int:
                             sender,
                             recipient,
                             reserved_events,
+                            verified_by_email[recipient],
                         )
                     smtp.send_message(message)
                 except Exception as exc:
