@@ -7,7 +7,7 @@ const STORAGE_KEY = "cgv-imax-email-alert-v1";
 const SUBSCRIPTIONS_STORAGE_KEY = "cgv-email-alert-subscriptions-v2";
 const MOVIE_STORAGE_KEY = "cgv-watcher-selected-target-v1";
 const MAX_EMAIL_LENGTH = 180;
-const DEFAULT_TARGET = "odyssey_imax";
+const DEFAULT_TARGET = "possible_love_any";
 
 const TARGETS = {
   odyssey_imax: {
