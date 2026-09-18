@@ -57,10 +57,10 @@
     ensureStyles();
 
     const button = document.getElementById("refresh-button");
-    const spiderButton = document.querySelector(
-      '.movie-select-button[data-target="spiderman_screenx"]',
-    );
-    if (!button || !spiderButton) return false;
+    const anchorButton = document.querySelector(
+      '.movie-select-button[data-target="possible_love_any"]',
+    ) || document.querySelector(".movie-select-button:last-of-type");
+    if (!button || !anchorButton) return false;
 
     const label = button.querySelector(".refresh-label");
     const icon = button.querySelector(".refresh-icon");
@@ -90,7 +90,7 @@
       }
     }
 
-    const rect = spiderButton.getBoundingClientRect();
+    const rect = anchorButton.getBoundingClientRect();
     if (rect.width > 0 && rect.height > 0) {
       const width = `${Math.round(rect.width)}px`;
       const height = `${Math.round(rect.height)}px`;
