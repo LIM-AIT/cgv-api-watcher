@@ -57,7 +57,7 @@ jobs:
 
       - name: Run dashboard watcher without email alerts
         env:
-          THEATERS: "용산아이파크몰:0013"
+          THEATERS: "용산아이파크몰:0013,영등포타임스퀘어:0059"
           DATE_FROM: "2026-09-16"
           DATE_TO: "2026-09-27"
           MOVIE_KEYWORD: "오디세이"
