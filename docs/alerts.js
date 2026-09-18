@@ -18,6 +18,14 @@ const TARGETS = {
       "이메일을 등록하면 오디세이 IMAX 예매가 열렸을 때 알림을 보내드립니다.",
     consent: "오디세이 IMAX 예매 오픈 이메일 알림 수신에 동의합니다.",
   },
+  possible_love_any: {
+    label: "가능한 사랑",
+    format: "전체 포맷",
+    title: "🔔 가능한 사랑 오픈 메일 알림",
+    description:
+      "이메일을 등록하면 가능한 사랑의 CGV 예매 회차가 포맷과 관계없이 처음 열렸을 때 알림을 보내드립니다.",
+    consent: "가능한 사랑 CGV 예매 오픈 이메일 알림 수신에 동의합니다.",
+  },
   spiderman_screenx: {
     label: "스파이더맨 · SCREENX",
     format: "SCREENX",
