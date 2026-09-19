@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import time
+
+from curl_cffi import requests
 
 API_BASE_URL = "https://cgv.co.kr/api/v1/booking/searchMovScnInfo"
 BOOKING_BASE_URL = "https://cgv.co.kr/cnm/movieBook/movie"
@@ -56,31 +56,28 @@ TARGETS = (
 
 
 def create_session() -> requests.Session:
-    retry = Retry(
-        total=3,
-        connect=3,
-        read=3,
-        status=3,
-        backoff_factor=0.8,
-        status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=frozenset({"GET"}),
-        raise_on_status=False,
-    )
-    adapter = HTTPAdapter(max_retries=retry)
-    session = requests.Session()
-    session.mount("https://", adapter)
+    session = requests.Session(impersonate="chrome")
     session.headers.update(
         {
             "Accept": "application/json, text/plain, */*",
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/139.0.0.0 Safari/537.36"
-            ),
-            "Referer": "https://cgv.co.kr/cnm/movieBook/cinema",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8",
+            "Referer": "https://cgv.co.kr/cnm/movieBook",
         }
     )
     return session
+
+
+def warm_session(session: requests.Session) -> str:
+    try:
+        response = session.get(
+            "https://cgv.co.kr/cnm/movieBook",
+            timeout=max(5, int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))),
+        )
+        if response.status_code == 200:
+            return ""
+        return f"CGV booking page HTTP {response.status_code}"
+    except Exception as exc:
+        return f"CGV booking page request failed: {type(exc).__name__}"
 
 
 def parse_theaters() -> list[dict[str, str]]:
@@ -190,16 +187,32 @@ def fetch_day(
     theater: dict[str, str],
     target_date: date,
 ) -> tuple[list[dict[str, Any]], str]:
-    response = session.get(
-        API_BASE_URL,
-        params={
-            "coCd": COMPANY_CODE,
-            "siteNo": theater["site_no"],
-            "scnYmd": target_date.strftime("%Y%m%d"),
-            "rtctlScopCd": "08",
-        },
-        timeout=max(5, int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))),
-    )
+    params = {
+        "coCd": COMPANY_CODE,
+        "siteNo": theater["site_no"],
+        "scnYmd": target_date.strftime("%Y%m%d"),
+        "rtctlScopCd": "08",
+    }
+    timeout = max(5, int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20")))
+
+    response = None
+    for attempt in range(2):
+        try:
+            response = session.get(API_BASE_URL, params=params, timeout=timeout)
+        except Exception as exc:
+            if attempt == 0:
+                time.sleep(1)
+                continue
+            return [], f"CGV API request failed: {type(exc).__name__}"
+
+        if response.status_code not in (403, 429) or attempt == 1:
+            break
+
+        warm_session(session)
+        time.sleep(1)
+
+    if response is None:
+        return [], "CGV API request failed"
     if response.status_code != 200:
         return [], f"CGV API HTTP {response.status_code}"
     try:
@@ -295,6 +308,7 @@ def target_status(theaters: list[dict[str, Any]]) -> str:
 def main() -> int:
     theaters = parse_theaters()
     session = create_session()
+    warm_session(session)
 
     union_dates = sorted({day for target in TARGETS for day in target_dates(target)})
     cache: dict[tuple[str, date], tuple[list[dict[str, Any]], str]] = {}
