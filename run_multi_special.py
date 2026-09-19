@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-from curl_cffi import requests
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 API_BASE_URL = "https://cgv.co.kr/api/v1/booking/searchMovScnInfo"
 BOOKING_BASE_URL = "https://cgv.co.kr/cnm/movieBook/movie"
@@ -55,28 +56,31 @@ TARGETS = (
 
 
 def create_session() -> requests.Session:
-    session = requests.Session(impersonate="chrome")
+    retry = Retry(
+        total=3,
+        connect=3,
+        read=3,
+        status=3,
+        backoff_factor=0.8,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET"}),
+        raise_on_status=False,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount("https://", adapter)
     session.headers.update(
         {
             "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8",
-            "Referer": "https://cgv.co.kr/cnm/movieBook",
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/139.0.0.0 Safari/537.36"
+            ),
+            "Referer": "https://cgv.co.kr/cnm/movieBook/cinema",
         }
     )
     return session
-
-
-def warm_session(session: requests.Session) -> str:
-    try:
-        response = session.get(
-            "https://cgv.co.kr/cnm/movieBook",
-            timeout=max(5, int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))),
-        )
-        if response.status_code == 200:
-            return ""
-        return f"CGV booking page HTTP {response.status_code}"
-    except Exception as exc:
-        return f"CGV booking page request failed: {type(exc).__name__}"
 
 
 def parse_theaters() -> list[dict[str, str]]:
@@ -186,32 +190,16 @@ def fetch_day(
     theater: dict[str, str],
     target_date: date,
 ) -> tuple[list[dict[str, Any]], str]:
-    params = {
-        "coCd": COMPANY_CODE,
-        "siteNo": theater["site_no"],
-        "scnYmd": target_date.strftime("%Y%m%d"),
-        "rtctlScopCd": "08",
-    }
-    timeout = max(5, int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20")))
-
-    response = None
-    for attempt in range(2):
-        try:
-            response = session.get(API_BASE_URL, params=params, timeout=timeout)
-        except Exception as exc:
-            if attempt == 0:
-                time.sleep(1)
-                continue
-            return [], f"CGV API request failed: {type(exc).__name__}"
-
-        if response.status_code not in (403, 429) or attempt == 1:
-            break
-
-        warm_session(session)
-        time.sleep(1)
-
-    if response is None:
-        return [], "CGV API request failed"
+    response = session.get(
+        API_BASE_URL,
+        params={
+            "coCd": COMPANY_CODE,
+            "siteNo": theater["site_no"],
+            "scnYmd": target_date.strftime("%Y%m%d"),
+            "rtctlScopCd": "08",
+        },
+        timeout=max(5, int(os.getenv("REQUEST_TIMEOUT_SECONDS", "20"))),
+    )
     if response.status_code != 200:
         return [], f"CGV API HTTP {response.status_code}"
     try:
@@ -307,13 +295,20 @@ def target_status(theaters: list[dict[str, Any]]) -> str:
 def main() -> int:
     theaters = parse_theaters()
     session = create_session()
-    warm_session(session)
 
-    union_dates = sorted({day for target in TARGETS for day in target_dates(target)})
+    # Query only theater/date pairs actually used by each target. This prevents
+    # a target added for one theater from multiplying requests across all theaters.
+    required_pairs = {
+        (theater["site_no"], day)
+        for target in TARGETS
+        for theater in theaters
+        if not target.theater_site_nos or theater["site_no"] in target.theater_site_nos
+        for day in target_dates(target)
+    }
+    theater_by_site = {theater["site_no"]: theater for theater in theaters}
     cache: dict[tuple[str, date], tuple[list[dict[str, Any]], str]] = {}
-    for theater in theaters:
-        for day in union_dates:
-            cache[(theater["site_no"], day)] = fetch_day(session, theater, day)
+    for site_no, day in sorted(required_pairs):
+        cache[(site_no, day)] = fetch_day(session, theater_by_site[site_no], day)
 
     target_payloads: dict[str, dict[str, Any]] = {}
     for target in TARGETS:
