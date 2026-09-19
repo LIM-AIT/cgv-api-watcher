@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
-
 from curl_cffi import requests
 
 API_BASE_URL = "https://cgv.co.kr/api/v1/booking/searchMovScnInfo"
