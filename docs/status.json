@@ -1,8 +1,8 @@
 {
   "service": "CGV WATCHER",
   "status": "DEGRADED",
-  "checked_at": "2026-09-24T11:51:56+09:00",
-  "checked_at_display": "2026-09-24 11:51:56 KST",
+  "checked_at": "2026-09-24T11:54:26+09:00",
+  "checked_at_display": "2026-09-24 11:54:26 KST",
   "default_target": "possible_love_any",
   "movie_keyword": "가능한 사랑",
   "display_name": "가능한 사랑",
